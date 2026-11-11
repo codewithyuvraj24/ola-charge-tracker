@@ -14,22 +14,19 @@ import { formatCurrency, formatNumber, formatDate, getDateRange } from "@/lib/ut
 import type { ChargingSession, DateFilter } from "@/lib/types";
 import { DATE_FILTER_OPTIONS } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Zap,
   Plus,
   IndianRupee,
-  TrendingUp,
-  BatteryCharging,
   Gauge,
-  Sparkles,
   ArrowUpRight,
   Filter,
-  Bike,
-  Activity,
   CheckCircle2,
-  Calendar,
+  BatteryCharging,
+  History,
+  TrendingDown,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -104,14 +101,14 @@ export default function DashboardPage() {
           endPercentage: quickEnd,
           electricityRate: scooter.electricityRate,
           location: "Home",
-          notes: "Quick 1-tap log",
+          notes: "Quick log",
         },
         scooter
       );
-      toast.success(`Logged! ${formatCurrency(quickCalc.totalCost)} saved to history.`);
+      toast.success(`Saved! ${formatCurrency(quickCalc.totalCost)} added to your records.`);
       await fetchSessions();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Failed to log charge";
+      const msg = e instanceof Error ? e.message : "Failed to record charge";
       toast.error(msg);
     } finally {
       setLoggingQuick(false);
@@ -119,160 +116,163 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Top Greeting & Scooter Identity */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Friendly Header with Scooter Context */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary uppercase tracking-wider">
-            <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-            Active Garage
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-0.5">
-            {scooter?.name || "Ola Electric Scooter"}
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
+            Charging Overview
           </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {scooter?.model} • {scooter?.batteryCapacity} kWh pack • ₹{scooter?.electricityRate}/unit
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Active: <span className="font-semibold text-foreground">{scooter?.name}</span> ({scooter?.model} • {scooter?.batteryCapacity} kWh)
           </p>
         </div>
 
-        <Link href="/add-session" className="sm:self-center">
-          <Button className="rounded-2xl font-semibold gap-2 shadow-lg shadow-primary/20 ios-pressable">
+        <Link href="/add-session">
+          <Button className="rounded-2xl px-5 py-5 font-semibold gap-2 shadow-lg shadow-primary/20 ios-pressable">
             <Plus className="h-4 w-4" />
-            <span>Full Session Log</span>
+            <span>Record New Charge</span>
           </Button>
         </Link>
       </div>
 
-      {/* 🚀 QUICK 1-TAP IN-PLACE LOGGER (Top UX simplification) */}
-      <Card className="ios-glass-card border-primary/25 shadow-lg overflow-hidden relative">
-        <div className="p-4 sm:p-5 space-y-3.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
-                <BatteryCharging className="h-4 w-4" />
-              </div>
-              <span className="font-bold text-sm text-foreground">1-Tap Quick Log</span>
+      {/* ⚡ 1-TAP QUICK CHARGE CARD */}
+      <div className="ev-card p-5 space-y-4 border-primary/30 relative overflow-hidden">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
+              <BatteryCharging className="h-5 w-5" />
             </div>
-            {quickCalc && (
-              <Badge variant="success" className="text-xs font-bold px-2 py-0.5">
-                {formatCurrency(quickCalc.totalCost)} • {formatNumber(quickCalc.gridUnits, 2)} units
-              </Badge>
-            )}
+            <div>
+              <div className="font-bold text-sm text-foreground leading-tight">Quick Charge Log</div>
+              <div className="text-xs text-muted-foreground">Select how much battery you plugged in:</div>
+            </div>
           </div>
 
-          {/* Quick Battery Chips */}
-          <div className="flex flex-wrap items-center gap-2">
-            {[
-              { s: 20, e: 80, label: "20% ➔ 80%" },
-              { s: 20, e: 100, label: "20% ➔ 100%" },
-              { s: 10, e: 100, label: "10% ➔ 100%" },
-              { s: 30, e: 90, label: "30% ➔ 90%" },
-            ].map((preset) => {
-              const isSelected = quickStart === preset.s && quickEnd === preset.e;
-              return (
-                <button
-                  key={preset.label}
-                  type="button"
-                  onClick={() => {
-                    setQuickStart(preset.s);
-                    setQuickEnd(preset.e);
-                  }}
-                  className={`text-xs px-3.5 py-2 rounded-xl font-semibold transition-all ios-pressable ${
-                    isSelected
-                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
-                      : "bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
-                >
-                  {preset.label}
-                </button>
-              );
-            })}
-
-            <Button
-              size="sm"
-              onClick={handleLogQuick}
-              disabled={loggingQuick || !quickCalc}
-              className="ml-auto rounded-xl px-5 py-2 font-bold text-xs gap-1.5 shadow-md shadow-primary/20 ios-pressable"
-            >
-              <Zap className="h-3.5 w-3.5" />
-              {loggingQuick ? "Saving..." : "Log Now"}
-            </Button>
-          </div>
+          {quickCalc && (
+            <div className="text-right">
+              <div className="text-lg font-black text-primary leading-tight">
+                {formatCurrency(quickCalc.totalCost)}
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                {formatNumber(quickCalc.gridUnits, 2)} units @ ₹{scooter?.electricityRate}
+              </div>
+            </div>
+          )}
         </div>
-      </Card>
 
-      {/* 🎯 THE BIG THREE GLANCE CARDS (Clean iOS 17 Hierarchy) */}
+        {/* Big Touch-Friendly Battery Buttons */}
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          {[
+            { s: 20, e: 80, label: "20% → 80%" },
+            { s: 20, e: 100, label: "20% → 100%" },
+            { s: 10, e: 100, label: "10% → 100%" },
+            { s: 30, e: 90, label: "30% → 90%" },
+          ].map((preset) => {
+            const isSelected = quickStart === preset.s && quickEnd === preset.e;
+            return (
+              <button
+                key={preset.label}
+                type="button"
+                onClick={() => {
+                  setQuickStart(preset.s);
+                  setQuickEnd(preset.e);
+                }}
+                className={`text-xs px-4 py-2.5 rounded-xl font-bold transition-all ios-pressable ${
+                  isSelected
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/30"
+                    : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                }`}
+              >
+                {preset.label}
+              </button>
+            );
+          })}
+
+          <Button
+            size="sm"
+            onClick={handleLogQuick}
+            disabled={loggingQuick || !quickCalc}
+            className="ml-auto rounded-xl px-6 py-2.5 font-bold text-xs gap-1.5 shadow-md shadow-primary/25 ios-pressable"
+          >
+            <Zap className="h-4 w-4" />
+            {loggingQuick ? "Saving..." : "Log This Charge"}
+          </Button>
+        </div>
+      </div>
+
+      {/* 🎯 3 BIG COMFORTABLE GLANCE METRICS */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Card 1: Total Expenditure */}
-        <Card className="ios-glass-card relative overflow-hidden p-5 space-y-2">
+        {/* Card 1: Money Spent */}
+        <div className="ev-card p-5 space-y-2">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Electricity Spend</span>
-            <div className="h-8 w-8 rounded-xl bg-primary/15 flex items-center justify-center text-primary">
+            <span className="text-xs font-semibold">Electricity Spent</span>
+            <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
               <IndianRupee className="h-4 w-4" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-foreground tracking-tight">
+          <div className="text-3xl font-black text-foreground tracking-tight">
             {formatCurrency(stats.totalExpenditure)}
           </div>
-          <div className="text-[11px] text-muted-foreground">
-            For {stats.totalSessions} charging cycles
+          <div className="text-xs text-muted-foreground">
+            Total for {stats.totalSessions} charging sessions
           </div>
-        </Card>
+        </div>
 
-        {/* Card 2: Grid Units Consumed */}
-        <Card className="ios-glass-card relative overflow-hidden p-5 space-y-2">
+        {/* Card 2: Power Drawn */}
+        <div className="ev-card p-5 space-y-2">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Grid Electricity Draw</span>
-            <div className="h-8 w-8 rounded-xl bg-cyan-500/15 flex items-center justify-center text-cyan-500">
+            <span className="text-xs font-semibold">Power Drawn</span>
+            <div className="h-8 w-8 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-500">
               <Zap className="h-4 w-4" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-foreground tracking-tight">
+          <div className="text-3xl font-black text-foreground tracking-tight">
             {formatNumber(stats.totalElectricity, 1)}{" "}
-            <span className="text-sm font-normal text-muted-foreground">kWh</span>
+            <span className="text-base font-semibold text-muted-foreground">units</span>
           </div>
-          <div className="text-[11px] text-muted-foreground">
-            Direct meter units (incl. {scooter?.chargingLoss}% loss)
+          <div className="text-xs text-muted-foreground">
+            Domestic meter kWh (incl. {scooter?.chargingLoss}% loss)
           </div>
-        </Card>
+        </div>
 
-        {/* Card 3: True Cost Per KM */}
-        <Card className="ios-glass-card relative overflow-hidden p-5 space-y-2">
+        {/* Card 3: Running Cost Per KM */}
+        <div className="ev-card p-5 space-y-2">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Running Cost / KM</span>
-            <div className="h-8 w-8 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-500">
+            <span className="text-xs font-semibold">Running Cost</span>
+            <div className="h-8 w-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
               <Gauge className="h-4 w-4" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-foreground tracking-tight">
+          <div className="text-3xl font-black text-foreground tracking-tight">
             {stats.costPerKm !== null ? (
               <>
                 {formatCurrency(stats.costPerKm)}
-                <span className="text-sm font-normal text-muted-foreground">/km</span>
+                <span className="text-base font-normal text-muted-foreground">/km</span>
               </>
             ) : (
-              <span className="text-xl font-normal text-muted-foreground">Log odometer</span>
+              <span className="text-lg font-medium text-muted-foreground">Log odometer</span>
             )}
           </div>
-          <div className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3" />
+          <div className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
+            <TrendingDown className="h-3.5 w-3.5" />
             ~₹2.20/km cheaper than petrol
           </div>
-        </Card>
+        </div>
       </div>
 
-      {/* Filter Chips Bar */}
-      <div className="flex items-center justify-between gap-2 p-2 rounded-2xl ios-glass">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-2">
+      {/* Date Filter Pills */}
+      <div className="flex items-center justify-between gap-2 p-2 rounded-2xl ev-card">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-2 font-medium">
           <Filter className="h-3.5 w-3.5 text-primary" />
-          <span className="hidden sm:inline">Range:</span>
+          <span>Time:</span>
         </div>
         <div className="flex flex-wrap gap-1">
           {DATE_FILTER_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => setDateFilter(opt.value)}
-              className={`text-xs px-3 py-1.5 rounded-xl font-semibold transition-all ios-pressable ${
+              className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition-all ios-pressable ${
                 dateFilter === opt.value
                   ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
                   : "text-muted-foreground hover:text-foreground"
@@ -284,20 +284,20 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Interactive Spending Chart */}
+      {/* Cost Trend Chart */}
       {sessions.length > 0 && (
-        <Card className="ios-glass-card p-5 space-y-4">
+        <div className="ev-card p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base font-bold">Spending Trend</CardTitle>
-              <p className="text-xs text-muted-foreground">Cost (₹) per charging plug-in</p>
+              <CardTitle className="text-base font-bold">Cost History</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">Money spent per charging plug-in</p>
             </div>
-            <Badge variant="outline" className="text-xs font-semibold">
+            <Badge variant="outline" className="text-xs font-bold">
               {sessionChartData.length} entries
             </Badge>
           </div>
 
-          <div className="h-60 w-full pt-2">
+          <div className="h-64 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={sessionChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
@@ -307,14 +307,15 @@ export default function DashboardPage() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
+                <XAxis dataKey="date" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(var(--card))",
                     borderColor: "hsl(var(--border))",
-                    borderRadius: "12px",
-                    fontSize: "12px",
+                    borderRadius: "14px",
+                    fontSize: "13px",
+                    fontWeight: "600",
                   }}
                   formatter={(val: number) => [`₹${val.toFixed(2)}`, "Cost"]}
                 />
@@ -329,16 +330,16 @@ export default function DashboardPage() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Recent Sessions */}
       {sessions.length > 0 && (
-        <Card className="ios-glass-card p-5 space-y-3">
-          <div className="flex items-center justify-between pb-1">
+        <div className="ev-card p-5 space-y-3">
+          <div className="flex items-center justify-between pb-1 border-b border-border/40">
             <CardTitle className="text-base font-bold">Recent Plug-ins</CardTitle>
-            <Link href="/history" className="text-xs text-primary font-semibold flex items-center gap-1 ios-pressable">
-              Full diary
+            <Link href="/history" className="text-xs text-primary font-bold flex items-center gap-1 ios-pressable">
+              View all
               <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -351,10 +352,10 @@ export default function DashboardPage() {
                     +{s.addedPercentage}%
                   </div>
                   <div>
-                    <div className="font-semibold text-foreground text-sm">
-                      {s.startPercentage}% ➔ {s.endPercentage}%
+                    <div className="font-bold text-foreground text-sm">
+                      {s.startPercentage}% → {s.endPercentage}%
                     </div>
-                    <div className="text-muted-foreground text-[11px]">
+                    <div className="text-muted-foreground text-xs mt-0.5">
                       {formatDate(s.date.toDate())} • {s.location || "Home"}
                     </div>
                   </div>
@@ -364,14 +365,14 @@ export default function DashboardPage() {
                   <div className="font-extrabold text-foreground text-sm">
                     {formatCurrency(s.totalCost)}
                   </div>
-                  <div className="text-[11px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground mt-0.5">
                     {formatNumber(s.gridUnits, 2)} units
                   </div>
                 </div>
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       )}
     </div>
   );

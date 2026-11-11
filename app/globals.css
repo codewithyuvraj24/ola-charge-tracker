@@ -4,103 +4,71 @@
 
 @layer base {
   :root {
-    /* Default: EV Emerald */
-    --background: 224 45% 6%;
-    --foreground: 210 40% 98%;
-    --card: 224 40% 9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 224 40% 9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 152 76% 46%;
-    --primary-foreground: 224 45% 6%;
-    --secondary: 224 35% 13%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 224 32% 14%;
-    --muted-foreground: 215 20% 62%;
-    --accent: 224 35% 14%;
-    --accent-foreground: 210 40% 98%;
+    /* Warm Charcoal & Electric Mint - Soft on eyes, high readability */
+    --background: 220 18% 7%;        /* #0f1217 Soft Charcoal */
+    --foreground: 210 20% 98%;       /* #f8fafc Crisp Off-White */
+    --card: 220 16% 10%;             /* #141820 Elevated Slate Card */
+    --card-foreground: 210 20% 98%;
+    --popover: 220 16% 10%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 152 76% 46%;          /* #10b981 Mint Emerald */
+    --primary-foreground: 220 20% 6%;
+    --secondary: 220 14% 15%;        /* #1f2532 */
+    --secondary-foreground: 210 20% 98%;
+    --muted: 220 14% 14%;
+    --muted-foreground: 218 14% 65%; /* Soft slate gray, high legibility */
+    --accent: 199 89% 52%;           /* #38bdf8 Soft Cyan */
+    --accent-foreground: 220 20% 6%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 224 35% 16%;
-    --input: 224 35% 16%;
+    --border: 220 14% 18%;           /* Clear, gentle borders */
+    --input: 220 14% 18%;
     --ring: 152 76% 46%;
-    --radius: 1.15rem;
+    --radius: 1.25rem;
   }
 
-  /* ⚡ Theme 1: Cyberpunk Hyper-Volt (Pitch black + Electric Neon Lime) */
   [data-theme="cyberpunk"] {
-    --background: 240 10% 3%;
+    --background: 240 10% 4%;
     --foreground: 0 0% 98%;
-    --card: 240 8% 7%;
+    --card: 240 8% 8%;
     --card-foreground: 0 0% 98%;
-    --primary: 74 100% 50%; /* #CCFF00 Hyper Volt Lime */
+    --primary: 74 100% 50%;
     --primary-foreground: 0 0% 0%;
-    --secondary: 240 6% 12%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 6% 12%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 187 100% 50%; /* Cyan */
-    --accent-foreground: 0 0% 0%;
     --border: 240 6% 16%;
-    --input: 240 6% 16%;
-    --ring: 74 100% 50%;
+    --muted-foreground: 240 5% 68%;
   }
 
-  /* 🏎️ Theme 2: Stealth Titanium (Porsche / Space Gray + Clean Ice Blue) */
   [data-theme="stealth"] {
     --background: 220 15% 7%;
     --foreground: 210 20% 98%;
     --card: 220 14% 11%;
     --card-foreground: 210 20% 98%;
-    --primary: 199 89% 52%; /* #38BDF8 Ice Aqua */
+    --primary: 199 89% 52%;
     --primary-foreground: 220 20% 6%;
-    --secondary: 220 12% 16%;
-    --secondary-foreground: 210 20% 98%;
-    --muted: 220 12% 16%;
-    --muted-foreground: 220 10% 60%;
-    --accent: 210 20% 98%;
-    --accent-foreground: 220 14% 11%;
     --border: 220 12% 18%;
-    --input: 220 12% 18%;
-    --ring: 199 89% 52%;
+    --muted-foreground: 220 10% 65%;
   }
 
-  /* 🌅 Theme 3: Solar Sunset (Warm Charcoal + Vibrant Amber Flame) */
   [data-theme="solar"] {
     --background: 20 20% 5%;
     --foreground: 30 20% 98%;
     --card: 20 16% 9%;
     --card-foreground: 30 20% 98%;
-    --primary: 24 95% 53%; /* #FF6B35 Flame Orange */
+    --primary: 24 95% 53%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 20 14% 14%;
-    --secondary-foreground: 30 20% 98%;
-    --muted: 20 14% 14%;
-    --muted-foreground: 25 15% 62%;
-    --accent: 38 92% 50%; /* Amber */
-    --accent-foreground: 20 20% 5%;
     --border: 20 15% 16%;
-    --input: 20 15% 16%;
-    --ring: 24 95% 53%;
+    --muted-foreground: 25 15% 66%;
   }
 
-  /* 💎 Theme 4: Nordic Minimalist Light (Crisp Paper White + British Racing Green) */
   [data-theme="light"] {
     --background: 210 40% 98%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
-    --primary: 158 64% 36%; /* Racing Green */
+    --primary: 158 64% 36%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 95%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 35% 93%;
-    --muted-foreground: 215 16% 45%;
-    --accent: 210 40% 95%;
-    --accent-foreground: 222 47% 11%;
     --border: 214 32% 88%;
-    --input: 214 32% 88%;
-    --ring: 158 64% 36%;
+    --muted-foreground: 215 16% 42%;
   }
 }
 
@@ -113,46 +81,54 @@
   html {
     height: -webkit-fill-available;
     overscroll-behavior-y: none;
+    font-size: 16px;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     min-height: 100vh;
     min-height: -webkit-fill-available;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-    letter-spacing: -0.011em;
+    /* Ergonomic Apple Human Interface System typography */
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+    line-height: 1.5;
+    letter-spacing: -0.012em;
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.025em;
+    font-weight: 700;
   }
 }
 
-/* Glassmorphic Materials */
-.ios-glass {
+/* Warm elevated cards with subtle ambient glow */
+.ev-card {
   background: var(--card);
-  opacity: 0.94;
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+}
+
+.ev-glass {
+  background: rgba(20, 24, 32, 0.88);
   backdrop-filter: blur(24px) saturate(160%);
   -webkit-backdrop-filter: blur(24px) saturate(160%);
   border: 1px solid var(--border);
 }
 
-.ios-glass-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 1.25rem;
-}
-
+/* Fluid Apple micro-interactions */
 .ios-pressable {
   transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), opacity 0.15s ease;
   user-select: none;
 }
 .ios-pressable:active {
-  transform: scale(0.96);
-  opacity: 0.85;
+  transform: scale(0.97);
+  opacity: 0.88;
 }
 
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(150, 150, 150, 0.25);
+  background: rgba(160, 160, 160, 0.25);
   border-radius: 9999px;
 }
