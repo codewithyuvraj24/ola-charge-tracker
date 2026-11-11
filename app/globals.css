@@ -4,131 +4,117 @@
 
 @layer base {
   :root {
-    /* Warm Charcoal & Electric Mint - Soft on eyes, high readability */
-    --background: 220 18% 7%;        /* #0f1217 Soft Charcoal */
-    --foreground: 210 20% 98%;       /* #f8fafc Crisp Off-White */
-    --card: 220 16% 10%;             /* #141820 Elevated Slate Card */
-    --card-foreground: 210 20% 98%;
-    --popover: 220 16% 10%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 152 76% 46%;          /* #10b981 Mint Emerald */
-    --primary-foreground: 220 20% 6%;
-    --secondary: 220 14% 15%;        /* #1f2532 */
-    --secondary-foreground: 210 20% 98%;
-    --muted: 220 14% 14%;
-    --muted-foreground: 218 14% 65%; /* Soft slate gray, high legibility */
-    --accent: 199 89% 52%;           /* #38bdf8 Soft Cyan */
-    --accent-foreground: 220 20% 6%;
+    /* Refined, Production Software Palette (Linear/Stripe standard) */
+    --background: 220 14% 96%;        /* Clean light-gray canvas */
+    --foreground: 222 47% 11%;        /* Deep dark slate */
+    --card: 0 0% 100%;                /* Pure white surface */
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 11%;           /* Purposeful graphite primary button */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 220 14% 92%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 220 14% 94%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 220 14% 92%;
+    --accent-foreground: 222 47% 11%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 220 14% 18%;           /* Clear, gentle borders */
-    --input: 220 14% 18%;
-    --ring: 152 76% 46%;
-    --radius: 1.25rem;
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
+    --ring: 222 47% 11%;
+    --radius: 0.625rem;               /* 10px - Industry standard rounded-lg */
   }
 
-  [data-theme="cyberpunk"] {
-    --background: 240 10% 4%;
-    --foreground: 0 0% 98%;
-    --card: 240 8% 8%;
-    --card-foreground: 0 0% 98%;
-    --primary: 74 100% 50%;
-    --primary-foreground: 0 0% 0%;
-    --border: 240 6% 16%;
-    --muted-foreground: 240 5% 68%;
-  }
-
-  [data-theme="stealth"] {
-    --background: 220 15% 7%;
-    --foreground: 210 20% 98%;
-    --card: 220 14% 11%;
+  /* Default Dark Mode: Serious, Engineered, Linear-style */
+  .dark,
+  [data-theme="dark"],
+  [data-theme="cyberpunk"],
+  [data-theme="stealth"],
+  [data-theme="solar"],
+  [data-theme="emerald"] {
+    --background: 224 25% 6%;         /* #090c10 - Deep GitHub/Linear dark */
+    --foreground: 210 20% 98%;        /* #f0f3f6 */
+    --card: 222 20% 9%;               /* #11151c - Subtle contrast surface */
     --card-foreground: 210 20% 98%;
-    --primary: 199 89% 52%;
-    --primary-foreground: 220 20% 6%;
-    --border: 220 12% 18%;
-    --muted-foreground: 220 10% 65%;
-  }
-
-  [data-theme="solar"] {
-    --background: 20 20% 5%;
-    --foreground: 30 20% 98%;
-    --card: 20 16% 9%;
-    --card-foreground: 30 20% 98%;
-    --primary: 24 95% 53%;
-    --primary-foreground: 0 0% 100%;
-    --border: 20 15% 16%;
-    --muted-foreground: 25 15% 66%;
+    --popover: 222 20% 9%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 152 68% 42%;           /* #1ec07b - Authentic EV battery emerald */
+    --primary-foreground: 224 30% 6%;
+    --secondary: 222 18% 14%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 222 18% 13%;
+    --muted-foreground: 217 14% 60%;  /* #8b96a5 - Sharp, legible documentation text */
+    --accent: 222 18% 14%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 68% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 222 16% 16%;            /* #1b212c - Pixel-perfect borders */
+    --input: 222 16% 16%;
+    --ring: 152 68% 42%;
+    --radius: 0.625rem;               /* 10px */
   }
 
   [data-theme="light"] {
-    --background: 210 40% 98%;
+    --background: 210 20% 98%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
-    --primary: 158 64% 36%;
+    --primary: 152 68% 36%;
     --primary-foreground: 0 0% 100%;
-    --border: 214 32% 88%;
-    --muted-foreground: 215 16% 42%;
+    --border: 214 20% 88%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 16% 45%;
+    --ring: 152 68% 36%;
   }
 }
 
 @layer base {
   * {
     @apply border-border;
-    -webkit-tap-highlight-color: transparent;
   }
   
   html {
-    height: -webkit-fill-available;
-    overscroll-behavior-y: none;
-    font-size: 16px;
+    font-size: 15px;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
-    min-height: 100vh;
-    min-height: -webkit-fill-available;
-    /* Ergonomic Apple Human Interface System typography */
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+    /* Clean, authoritative corporate typeface stack */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
     line-height: 1.5;
-    letter-spacing: -0.012em;
+    letter-spacing: -0.01em;
   }
 
   h1, h2, h3, h4 {
-    letter-spacing: -0.025em;
-    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-weight: 600;
   }
 }
 
-/* Warm elevated cards with subtle ambient glow */
-.ev-card {
+/* Production solid card - No overdone shadows or aggressive blur */
+.pro-card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 1.25rem;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
-.ev-glass {
-  background: rgba(20, 24, 32, 0.88);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  border: 1px solid var(--border);
+.pro-card-hover {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.pro-card-hover:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.15);
 }
 
-/* Fluid Apple micro-interactions */
-.ios-pressable {
-  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), opacity 0.15s ease;
-  user-select: none;
-}
-.ios-pressable:active {
-  transform: scale(0.97);
-  opacity: 0.88;
-}
-
+/* Simple reliable scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(160, 160, 160, 0.25);
-  border-radius: 9999px;
+  background: var(--border);
+  border-radius: 4px;
 }

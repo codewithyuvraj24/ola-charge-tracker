@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ScooterProvider, useScooter } from "@/lib/scooter-context";
-import { useTheme } from "@/lib/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,13 +15,12 @@ import {
   TrendingUp,
   Settings,
   LogOut,
-  Palette,
   Bike,
-  ShieldCheck,
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Add Session", href: "/add-session", icon: Plus },
   { label: "History", href: "/history", icon: History },
   { label: "Analytics", href: "/analytics", icon: TrendingUp },
   { label: "Settings", href: "/settings", icon: Settings },
@@ -33,7 +31,6 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, userProfile, loading, logout } = useAuth();
   const { scooter, loadingScooter } = useScooter();
-  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     if (!loading) {
@@ -47,80 +44,50 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   if (loading || loadingScooter) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3">
-        <div className="h-14 w-14 rounded-2xl ios-glass flex items-center justify-center text-primary shadow-xl shadow-primary/15 animate-pulse">
-          <Zap className="h-7 w-7" />
-        </div>
-        <p className="text-xs font-medium text-muted-foreground tracking-wide">
-          Connecting to your garage...
-        </p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-2 text-xs text-muted-foreground">
+        <Zap className="h-5 w-5 text-primary animate-pulse" />
+        <span>Loading workspace...</span>
       </div>
     );
   }
 
   if (!user) return null;
 
-  // Next theme in cycle for quick toggle button
-  const cycleNextTheme = () => {
-    const list: ("cyberpunk" | "stealth" | "solar" | "emerald" | "light")[] = [
-      "cyberpunk",
-      "stealth",
-      "solar",
-      "emerald",
-      "light",
-    ];
-    const currentIndex = list.indexOf(theme);
-    const nextTheme = list[(currentIndex + 1) % list.length];
-    setTheme(nextTheme);
-  };
-
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row pb-28 md:pb-0">
-      {/* Desktop Sidebar (macOS/iPad Pro style) */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-border/50 ios-glass p-5 sticky top-0 h-screen">
+    <div className="min-h-screen bg-background flex flex-col md:flex-row pb-16 md:pb-0">
+      {/* Desktop Sidebar - Clean, Professional Enterprise Navigation */}
+      <aside className="hidden md:flex flex-col w-60 border-r border-border bg-card p-4 sticky top-0 h-screen">
         {/* Brand */}
-        <div className="flex items-center gap-3 px-2 py-2 mb-5">
-          <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/25">
-            <Zap className="h-5 w-5" />
+        <div className="flex items-center gap-2.5 px-2 py-2 mb-4">
+          <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center text-primary-foreground font-bold">
+            <Zap className="h-4 w-4" />
           </div>
           <div>
-            <div className="font-bold text-base tracking-tight leading-tight flex items-center gap-1.5">
-              <span>Ola Charge</span>
-              <Badge variant="success" className="text-[9px] px-1.5 py-0 font-bold">PRO</Badge>
+            <div className="font-semibold text-sm leading-tight text-foreground">
+              Ola Charge
             </div>
-            <div className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">
-              Smart Energy
-            </div>
+            <div className="text-[10px] text-muted-foreground">EV Telemetry</div>
           </div>
         </div>
 
-        {/* Scooter Card in Sidebar */}
+        {/* Scooter Status Chip */}
         {scooter && (
-          <div className="mb-6 rounded-2xl ios-glass-card p-3.5 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 font-semibold text-xs text-foreground">
-                <Bike className="h-3.5 w-3.5 text-primary" />
+          <div className="mb-4 rounded-md border border-border bg-muted/30 p-2.5 text-xs space-y-1">
+            <div className="flex items-center justify-between font-medium text-foreground">
+              <span className="flex items-center gap-1.5 truncate">
+                <Bike className="h-3.5 w-3.5 text-primary shrink-0" />
                 {scooter.name}
               </span>
-              <Badge variant="outline" className="text-[10px] font-semibold">{scooter.batteryCapacity} kWh</Badge>
+              <span className="text-[10px] text-muted-foreground font-mono">{scooter.batteryCapacity} kWh</span>
             </div>
-            <div className="text-[11px] text-muted-foreground flex items-center justify-between">
-              <span>{scooter.model}</span>
-              <span className="font-medium text-foreground">₹{scooter.electricityRate}/u</span>
+            <div className="text-[11px] text-muted-foreground truncate">
+              {scooter.model} • ₹{scooter.electricityRate}/unit
             </div>
           </div>
         )}
 
-        {/* Quick Add Session Button for Desktop */}
-        <Link href="/add-session" className="mb-4">
-          <Button className="w-full rounded-2xl font-semibold gap-2 py-5 shadow-lg shadow-primary/20 ios-pressable">
-            <Plus className="h-4 w-4" />
-            <span>Record Session</span>
-          </Button>
-        </Link>
-
-        {/* Navigation Links */}
-        <nav className="flex-1 space-y-1">
+        {/* Navigation Items */}
+        <nav className="flex-1 space-y-0.5">
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
@@ -128,9 +95,9 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ios-pressable ${
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
                   isActive
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                    ? "bg-secondary text-foreground font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 }`}
               >
@@ -141,39 +108,21 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* Security badge */}
-        <div className="py-2.5 px-3 my-2 rounded-xl bg-muted/20 border border-border/30 text-[11px] text-muted-foreground flex items-center gap-2">
-          <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />
-          <span>Encrypted Private Vault</span>
-        </div>
-
-        {/* User profile & controls */}
-        <div className="border-t border-border/50 pt-3 space-y-2">
-          <div className="flex items-center justify-between px-2">
-            <div className="truncate text-xs">
-              <div className="font-semibold text-foreground truncate">
-                {userProfile?.displayName || user.email?.split("@")[0]}
-              </div>
-              <div className="text-muted-foreground truncate text-[10px]">
-                {user.email}
-              </div>
+        {/* User Account Controls */}
+        <div className="border-t border-border pt-3 space-y-2">
+          <div className="px-2 truncate">
+            <div className="font-medium text-xs text-foreground truncate">
+              {userProfile?.displayName || user.email?.split("@")[0]}
             </div>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground ios-pressable"
-              onClick={cycleNextTheme}
-              title="Cycle theme"
-            >
-              <Palette className="h-4 w-4 text-primary" />
-            </Button>
+            <div className="text-[11px] text-muted-foreground truncate">
+              {user.email}
+            </div>
           </div>
 
           <Button
             variant="ghost"
             size="sm"
-            className="w-full justify-start text-xs rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10 ios-pressable"
+            className="w-full justify-start text-xs h-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
             onClick={async () => {
               await logout();
               router.push("/");
@@ -185,92 +134,43 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* iOS 17 Mobile Top Navigation Bar */}
-      <header className="md:hidden flex items-center justify-between px-5 pt-4 pb-3 border-b border-border/40 ios-glass sticky top-0 z-30">
-        <Link href="/dashboard" className="flex items-center gap-2.5 ios-pressable">
-          <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center text-primary-foreground shadow-md shadow-primary/20">
-            <Zap className="h-4 w-4" />
+      {/* Mobile Header */}
+      <header className="md:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-card sticky top-0 z-30">
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <div className="h-6 w-6 rounded bg-primary flex items-center justify-center text-primary-foreground">
+            <Zap className="h-3.5 w-3.5" />
           </div>
-          <div>
-            <div className="font-bold text-sm tracking-tight leading-tight">Ola Charge</div>
-            <div className="text-[10px] text-muted-foreground">{scooter?.name || "EV Tracker"}</div>
-          </div>
+          <span className="font-semibold text-sm">Ola Charge</span>
         </Link>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2.5 rounded-xl text-xs gap-1.5 ios-pressable bg-muted/40"
-            onClick={cycleNextTheme}
-          >
-            <Palette className="h-3.5 w-3.5 text-primary" />
-            <span className="capitalize text-[11px] font-bold">{theme}</span>
-          </Button>
-        </div>
+        <span className="text-xs text-muted-foreground font-medium">{scooter?.name}</span>
       </header>
 
-      {/* Main Content Area */}
+      {/* Main Page Content */}
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
           {children}
         </div>
       </main>
 
-      {/* iOS 17 Floating Tab Bar with Center Dynamic Charging Action */}
-      <div className="md:hidden fixed bottom-3 left-4 right-4 z-40">
-        <nav className="ios-glass rounded-3xl p-1.5 shadow-2xl shadow-black/40 border border-white/10 flex items-center justify-around">
-          <Link
-            href="/dashboard"
-            className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all ios-pressable ${
-              pathname === "/dashboard" ? "text-primary font-bold" : "text-muted-foreground"
-            }`}
-          >
-            <LayoutDashboard className="h-5 w-5" />
-            <span className="text-[10px] mt-0.5 tracking-tight">Overview</span>
-          </Link>
-
-          <Link
-            href="/history"
-            className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all ios-pressable ${
-              pathname === "/history" ? "text-primary font-bold" : "text-muted-foreground"
-            }`}
-          >
-            <History className="h-5 w-5" />
-            <span className="text-[10px] mt-0.5 tracking-tight">History</span>
-          </Link>
-
-          {/* Center Floating Plus */}
-          <Link
-            href="/add-session"
-            className="flex items-center justify-center -my-2.5 ios-pressable"
-          >
-            <div className="h-13 w-13 rounded-2xl bg-gradient-to-tr from-primary to-primary/80 text-primary-foreground p-3 shadow-lg shadow-primary/40 border-2 border-background/60">
-              <Plus className="h-6 w-6 stroke-[2.5]" />
-            </div>
-          </Link>
-
-          <Link
-            href="/analytics"
-            className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all ios-pressable ${
-              pathname === "/analytics" ? "text-primary font-bold" : "text-muted-foreground"
-            }`}
-          >
-            <TrendingUp className="h-5 w-5" />
-            <span className="text-[10px] mt-0.5 tracking-tight">Analytics</span>
-          </Link>
-
-          <Link
-            href="/settings"
-            className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all ios-pressable ${
-              pathname === "/settings" ? "text-primary font-bold" : "text-muted-foreground"
-            }`}
-          >
-            <Settings className="h-5 w-5" />
-            <span className="text-[10px] mt-0.5 tracking-tight">Settings</span>
-          </Link>
-        </nav>
-      </div>
+      {/* Mobile Fixed Bottom Navigation Bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border flex items-center justify-around py-2">
+        {NAV_ITEMS.map((item) => {
+          const isActive = pathname === item.href;
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center justify-center py-1 px-3 text-[10px] font-medium transition-colors ${
+                isActive ? "text-primary font-bold" : "text-muted-foreground"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span className="mt-1">{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }
