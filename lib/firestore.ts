@@ -10,7 +10,6 @@ import {
   orderBy,
   where,
   Timestamp,
-  setDoc,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import type { Scooter, ChargingSession, ScooterFormData, SessionFormData, UserProfile } from "./types";
@@ -137,7 +136,6 @@ export async function addChargingSession(
     updatedAt: now,
   });
 
-  // Update odometer on scooter if end odometer provided
   if (typeof data.endOdometer === "number" && data.endOdometer > 0) {
     await updateScooter(userId, scooter.id, { currentOdometer: data.endOdometer });
   }
@@ -188,8 +186,6 @@ export async function deleteChargingSession(
   await deleteDoc(doc(db, "users", userId, "chargingSessions", sessionId));
 }
 
-// ─── Complete Onboarding ─────────────────────────────────────
-
 export async function completeOnboarding(
   userId: string,
   scooterData: ScooterFormData
@@ -201,3 +197,44 @@ export async function completeOnboarding(
   });
 }
 
+// ─── Demo Data Seeder ────────────────────────────────────────
+
+export async function seedDemoSessions(userId: string, scooter: Scooter): Promise<number> {
+  const now = new Date();
+  const demoRecords = [
+    { daysAgo: 1, start: 18, end: 100, sOdo: 2180, eOdo: 2275, loc: "Home", notes: "Full overnight charge" },
+    { daysAgo: 4, start: 25, end: 85, sOdo: 2110, eOdo: 2180, loc: "Office", notes: "Afternoon top-up" },
+    { daysAgo: 7, start: 15, end: 95, sOdo: 2015, eOdo: 2110, loc: "Home", notes: "Weekend long ride recharge" },
+    { daysAgo: 11, start: 30, end: 90, sOdo: 1945, eOdo: 2015, loc: "Ola Hypercharger", notes: "Quick coffee charge" },
+    { daysAgo: 15, start: 22, end: 100, sOdo: 1850, eOdo: 1945, loc: "Home", notes: "Mid-month cycle" },
+    { daysAgo: 21, start: 28, end: 100, sOdo: 1765, eOdo: 1850, loc: "Home", notes: "Routine charge" },
+    { daysAgo: 28, start: 12, end: 90, sOdo: 1670, eOdo: 1765, loc: "Home", notes: "Late night plug-in" },
+    { daysAgo: 38, start: 20, end: 100, sOdo: 1580, eOdo: 1670, loc: "Home", notes: "Monthly start" },
+    { daysAgo: 46, start: 35, end: 85, sOdo: 1520, eOdo: 1580, loc: "Office", notes: "Quick work top-up" },
+    { daysAgo: 55, start: 16, end: 100, sOdo: 1420, eOdo: 1520, loc: "Home", notes: "Full reset" },
+    { daysAgo: 65, start: 24, end: 95, sOdo: 1335, eOdo: 1420, loc: "Home", notes: "Regular ride week" },
+    { daysAgo: 78, start: 20, end: 100, sOdo: 1240, eOdo: 1335, loc: "Home", notes: "First month milestone" },
+  ];
+
+  for (const item of demoRecords) {
+    const sessionDate = new Date(now);
+    sessionDate.setDate(sessionDate.getDate() - item.daysAgo);
+
+    await addChargingSession(
+      userId,
+      {
+        date: sessionDate,
+        startPercentage: item.start,
+        endPercentage: item.end,
+        electricityRate: scooter.electricityRate,
+        startOdometer: item.sOdo,
+        endOdometer: item.eOdo,
+        location: item.loc,
+        notes: item.notes,
+      },
+      scooter
+    );
+  }
+
+  return demoRecords.length;
+}
