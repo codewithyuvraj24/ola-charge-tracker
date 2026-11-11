@@ -1,1 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#0b1220"/><rect x="82" y="82" width="348" height="348" rx="92" fill="#183c39"/><path d="M286 84 164 276h83l-21 152 122-202h-85l23-142Z" fill="#68d6b0"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1329"/>
+      <stop offset="100%" stop-color="#050811"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="50%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <!-- Background with iOS squircle shape -->
+  <rect width="512" height="512" rx="115" fill="url(#bg)"/>
+  <!-- Subtle inner border -->
+  <rect x="4" y="4" width="504" height="504" rx="112" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/>
+  <!-- Glowing electric lightning bolt -->
+  <path d="M288 48L112 288h144l-32 176 176-240H256l32-176z" fill="url(#bolt)" filter="url(#glow)"/>
+</svg>

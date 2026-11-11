@@ -481,3 +481,4 @@ export default function AddSessionPage() {
     </div>
   );
 }
+
