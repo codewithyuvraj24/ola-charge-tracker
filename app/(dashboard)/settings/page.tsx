@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useScooter } from "@/lib/scooter-context";
 import { useTheme } from "@/lib/theme-provider";
-import { updateScooter, updateUserProfile, seedDemoSessions } from "@/lib/firestore";
+import { updateScooter, updateUserProfile } from "@/lib/firestore";
 import { SCOOTER_MODELS, type ScooterFormData } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,14 +23,10 @@ import {
   Sun,
   Moon,
   Laptop,
-  Sparkles,
-  Database,
-  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
-  const router = useRouter();
   const { user, userProfile, refreshProfile } = useAuth();
   const { scooter, refreshScooter } = useScooter();
   const { theme, setTheme } = useTheme();
@@ -40,9 +35,6 @@ export default function SettingsPage() {
   const [displayName, setDisplayName] = useState(userProfile?.displayName || "");
   const [currency, setCurrency] = useState(userProfile?.currency || "₹");
   const [savingProfile, setSavingProfile] = useState(false);
-
-  // Demo state
-  const [seedingDemo, setSeedingDemo] = useState(false);
 
   // Scooter State
   const [scooterForm, setScooterForm] = useState<ScooterFormData>({
@@ -127,25 +119,6 @@ export default function SettingsPage() {
     }
   };
 
-  // Seed Realistic Demo Data
-  const handleSeedDemo = async () => {
-    if (!user || !scooter) {
-      toast.error("Scooter not ready");
-      return;
-    }
-    setSeedingDemo(true);
-    try {
-      const count = await seedDemoSessions(user.uid, scooter);
-      toast.success(`Success! Generated ${count} realistic charging sessions across the last 3 months.`);
-      router.push("/dashboard");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to generate demo records";
-      toast.error(msg);
-    } finally {
-      setSeedingDemo(false);
-    }
-  };
-
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
@@ -158,7 +131,7 @@ export default function SettingsPage() {
           Settings & Preferences
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Manage your scooter specs, electricity tariff, demo data, and theme
+          Manage your scooter specs, electricity tariff, profile, and theme
         </p>
       </div>
 
@@ -167,10 +140,6 @@ export default function SettingsPage() {
           <TabsTrigger value="scooter" className="gap-2 text-xs">
             <Bike className="h-3.5 w-3.5" />
             Scooter Specs
-          </TabsTrigger>
-          <TabsTrigger value="demo" className="gap-2 text-xs">
-            <Database className="h-3.5 w-3.5" />
-            Demo Showcase
           </TabsTrigger>
           <TabsTrigger value="profile" className="gap-2 text-xs">
             <User className="h-3.5 w-3.5" />
@@ -332,58 +301,6 @@ export default function SettingsPage() {
               <Button type="submit" form="scooter-form" disabled={savingScooter}>
                 {savingScooter && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save Scooter Settings
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        {/* Demo Showcase Tab */}
-        <TabsContent value="demo" className="space-y-4">
-          <Card className="border-primary/40 bg-card/70 shadow-md">
-            <CardHeader>
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-primary">
-                <Sparkles className="h-4 w-4" />
-                Demo & Presentation Tool
-              </div>
-              <CardTitle className="text-lg">Instant Realistic Demo Data</CardTitle>
-              <CardDescription>
-                Preparing a video demo, portfolio review, or testing features? Populate 12 realistic charging sessions across the last 3 months with real graphs, odometer calculations, and insights in 1 tap.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 text-xs text-muted-foreground">
-              <div className="p-4 rounded-xl bg-muted/40 border border-border/50 space-y-2">
-                <div className="font-semibold text-foreground text-sm flex items-center gap-2">
-                  <Database className="h-4 w-4 text-primary" />
-                  What will be generated:
-                </div>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>12 charging sessions spread over the past 90 days</li>
-                  <li>Real battery percentages (15% ➔ 95%, 20% ➔ 100%, 35% ➔ 85%)</li>
-                  <li>Odometer deltas calculating authentic EV running costs (~₹0.38/km)</li>
-                  <li>Locations: Home, Office, and Ola Hypercharger</li>
-                  <li>Fully interactive charts on Dashboard and Analytics</li>
-                </ul>
-              </div>
-            </CardContent>
-            <CardFooter className="border-t border-border/40 pt-4">
-              <Button
-                type="button"
-                onClick={handleSeedDemo}
-                disabled={seedingDemo}
-                className="font-semibold shadow-md shadow-primary/20 gap-2"
-              >
-                {seedingDemo ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Generating 12 records...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    Generate 12 Demo Charging Sessions
-                    <ArrowRight className="h-4 w-4 ml-1" />
-                  </>
-                )}
               </Button>
             </CardFooter>
           </Card>
