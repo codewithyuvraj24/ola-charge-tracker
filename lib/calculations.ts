@@ -1,0 +1,115 @@
+import type { CalculatedValues, ChargingSession, DashboardStats, MonthlyData, SessionChartData } from "./types";
+
+/**
+ * Core calculation engine for charging sessions.
+ * All calculations follow the specification:
+ *   batteryEnergy = ((endPct - startPct) / 100) × batteryCapacity
+ *   gridEnergy    = batteryEnergy / (1 - chargingLoss / 100)
+ *   chargingCost  = gridEnergy × electricityRate
+ */
+
+export function calculateSession(
+  startPercentage: number,
+  endPercentage: number,
+  batteryCapacity: number,
+  electricityRate: number,
+  chargingLoss: number,
+  startOdometer?: number,
+  endOdometer?: number
+): CalculatedValues {
+  const addedPercentage = endPercentage - startPercentage;
+  const energyStored = (addedPercentage / 100) * batteryCapacity;
+  const lossFactor = 1 - chargingLoss / 100;
+  const gridUnits = lossFactor > 0 ? energyStored / lossFactor : energyStored;
+  const totalCost = gridUnits * electricityRate;
+
+  let distanceTravelled: number | undefined;
+  if (
+    startOdometer !== undefined &&
+    endOdometer !== undefined &&
+    startOdometer > 0 &&
+    endOdometer > 0
+  ) {
+    distanceTravelled = endOdometer - startOdometer;
+    if (distanceTravelled < 0) distanceTravelled = undefined;
+  }
+
+  return {
+    addedPercentage: round(addedPercentage, 2),
+    energyStored: round(energyStored, 4),
+    gridUnits: round(gridUnits, 4),
+    totalCost: round(totalCost, 2),
+    distanceTravelled: distanceTravelled !== undefined ? round(distanceTravelled, 1) : undefined,
+  };
+}
+
+export function computeDashboardStats(sessions: ChargingSession[]): DashboardStats {
+  if (sessions.length === 0) {
+    return {
+      totalSessions: 0,
+      totalElectricity: 0,
+      totalExpenditure: 0,
+      averageCost: 0,
+      averageAdded: 0,
+      totalDistance: 0,
+      costPerKm: null,
+    };
+  }
+
+  const totalSessions = sessions.length;
+  const totalElectricity = sessions.reduce((sum, s) => sum + s.gridUnits, 0);
+  const totalExpenditure = sessions.reduce((sum, s) => sum + s.totalCost, 0);
+  const averageCost = totalExpenditure / totalSessions;
+  const averageAdded = sessions.reduce((sum, s) => sum + s.addedPercentage, 0) / totalSessions;
+  const totalDistance = sessions.reduce((sum, s) => sum + (s.distanceTravelled ?? 0), 0);
+  const costPerKm = totalDistance > 0 ? totalExpenditure / totalDistance : null;
+
+  return {
+    totalSessions,
+    totalElectricity: round(totalElectricity, 2),
+    totalExpenditure: round(totalExpenditure, 2),
+    averageCost: round(averageCost, 2),
+    averageAdded: round(averageAdded, 1),
+    totalDistance: round(totalDistance, 1),
+    costPerKm: costPerKm !== null ? round(costPerKm, 2) : null,
+  };
+}
+
+export function computeMonthlyData(sessions: ChargingSession[]): MonthlyData[] {
+  const map = new Map<string, MonthlyData>();
+
+  for (const s of sessions) {
+    const d = s.date.toDate();
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
+
+    if (!map.has(key)) {
+      map.set(key, { month: label, expenditure: 0, electricity: 0, sessions: 0 });
+    }
+    const entry = map.get(key)!;
+    entry.expenditure = round(entry.expenditure + s.totalCost, 2);
+    entry.electricity = round(entry.electricity + s.gridUnits, 2);
+    entry.sessions += 1;
+  }
+
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, v]) => v);
+}
+
+export function computeSessionChartData(sessions: ChargingSession[]): SessionChartData[] {
+  return sessions
+    .sort((a, b) => a.date.toMillis() - b.date.toMillis())
+    .map((s) => ({
+      date: s.date.toDate().toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
+      cost: round(s.totalCost, 2),
+      added: s.addedPercentage,
+      gridUnits: round(s.gridUnits, 2),
+    }));
+}
+
+function round(value: number, decimals: number): number {
+  const factor = Math.pow(10, decimals);
+  return Math.round(value * factor) / factor;
+}
+
