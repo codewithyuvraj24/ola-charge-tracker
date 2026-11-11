@@ -16,11 +16,9 @@ import {
   TrendingUp,
   Settings,
   LogOut,
-  Sun,
-  Moon,
+  Palette,
   Bike,
   ShieldCheck,
-  ChevronRight,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -35,7 +33,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, userProfile, loading, logout } = useAuth();
   const { scooter, loadingScooter } = useScooter();
-  const { setTheme, resolvedTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     if (!loading) {
@@ -62,13 +60,27 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   if (!user) return null;
 
+  // Next theme in cycle for quick toggle button
+  const cycleNextTheme = () => {
+    const list: ("cyberpunk" | "stealth" | "solar" | "emerald" | "light")[] = [
+      "cyberpunk",
+      "stealth",
+      "solar",
+      "emerald",
+      "light",
+    ];
+    const currentIndex = list.indexOf(theme);
+    const nextTheme = list[(currentIndex + 1) % list.length];
+    setTheme(nextTheme);
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row pb-28 md:pb-0">
       {/* Desktop Sidebar (macOS/iPad Pro style) */}
       <aside className="hidden md:flex flex-col w-64 border-r border-border/50 ios-glass p-5 sticky top-0 h-screen">
         {/* Brand */}
         <div className="flex items-center gap-3 px-2 py-2 mb-5">
-          <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25">
+          <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/25">
             <Zap className="h-5 w-5" />
           </div>
           <div>
@@ -151,13 +163,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               variant="ghost"
               size="icon"
               className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground ios-pressable"
-              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              onClick={cycleNextTheme}
+              title="Cycle theme"
             >
-              {resolvedTheme === "dark" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
+              <Palette className="h-4 w-4 text-primary" />
             </Button>
           </div>
 
@@ -176,10 +185,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* iOS 17 Mobile Top Navigation Bar (with Dynamic Island / Notch safe area) */}
+      {/* iOS 17 Mobile Top Navigation Bar */}
       <header className="md:hidden flex items-center justify-between px-5 pt-4 pb-3 border-b border-border/40 ios-glass sticky top-0 z-30">
         <Link href="/dashboard" className="flex items-center gap-2.5 ios-pressable">
-          <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+          <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center text-primary-foreground shadow-md shadow-primary/20">
             <Zap className="h-4 w-4" />
           </div>
           <div>
@@ -191,11 +200,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-xl ios-pressable"
-            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            size="sm"
+            className="h-8 px-2.5 rounded-xl text-xs gap-1.5 ios-pressable bg-muted/40"
+            onClick={cycleNextTheme}
           >
-            {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            <Palette className="h-3.5 w-3.5 text-primary" />
+            <span className="capitalize text-[11px] font-bold">{theme}</span>
           </Button>
         </div>
       </header>
@@ -210,7 +220,6 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       {/* iOS 17 Floating Tab Bar with Center Dynamic Charging Action */}
       <div className="md:hidden fixed bottom-3 left-4 right-4 z-40">
         <nav className="ios-glass rounded-3xl p-1.5 shadow-2xl shadow-black/40 border border-white/10 flex items-center justify-around">
-          {/* Tab 1: Overview */}
           <Link
             href="/dashboard"
             className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all ios-pressable ${
@@ -221,7 +230,6 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             <span className="text-[10px] mt-0.5 tracking-tight">Overview</span>
           </Link>
 
-          {/* Tab 2: History */}
           <Link
             href="/history"
             className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all ios-pressable ${
@@ -232,17 +240,16 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             <span className="text-[10px] mt-0.5 tracking-tight">History</span>
           </Link>
 
-          {/* Center Floating Plus (iOS Dynamic Action) */}
+          {/* Center Floating Plus */}
           <Link
             href="/add-session"
             className="flex items-center justify-center -my-2.5 ios-pressable"
           >
-            <div className="h-13 w-13 rounded-2xl bg-gradient-to-tr from-emerald-600 to-emerald-400 text-white p-3 shadow-lg shadow-emerald-500/40 border-2 border-background/60">
+            <div className="h-13 w-13 rounded-2xl bg-gradient-to-tr from-primary to-primary/80 text-primary-foreground p-3 shadow-lg shadow-primary/40 border-2 border-background/60">
               <Plus className="h-6 w-6 stroke-[2.5]" />
             </div>
           </Link>
 
-          {/* Tab 3: Analytics */}
           <Link
             href="/analytics"
             className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all ios-pressable ${
@@ -253,7 +260,6 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             <span className="text-[10px] mt-0.5 tracking-tight">Analytics</span>
           </Link>
 
-          {/* Tab 4: Settings */}
           <Link
             href="/settings"
             className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all ios-pressable ${
