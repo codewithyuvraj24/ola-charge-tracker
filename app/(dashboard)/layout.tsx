@@ -111,8 +111,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         {/* Desktop Sidebar */}
         <aside className="hidden md:flex flex-col w-64 border-r border-border bg-card/60 p-4 sticky top-0 h-screen">
           {/* Brand */}
-          <div className="flex items-center gap-2.5 px-2 py-1.5 mb-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+          <Link
+            href="/"
+            title="Go to main page"
+            className="flex items-center gap-2.5 px-2 py-1.5 mb-4 rounded-lg hover:bg-muted/50 transition-colors group"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm group-hover:scale-105 transition-transform">
               <Zap className="h-4 w-4 fill-current" />
             </div>
             <div className="flex flex-col">
@@ -126,7 +130,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               </div>
               <span className="text-[11px] text-muted-foreground">EV Energy Tracker</span>
             </div>
-          </div>
+          </Link>
 
           {/* Active Vehicle Card / Switcher */}
           {scooter && (
@@ -292,7 +296,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
         {/* Mobile Header (iOS 17 safe area + Sheet Drawer) */}
         <header className="md:hidden flex items-center justify-between px-4 pt-safe py-2.5 border-b border-border/70 ios-material sticky top-0 z-30">
-          <Link href="/dashboard" className="flex items-center gap-2 ios-touch">
+          <Link href="/" title="Go to main page" className="flex items-center gap-2 ios-touch">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <Zap className="h-4 w-4 fill-current" />
             </div>
