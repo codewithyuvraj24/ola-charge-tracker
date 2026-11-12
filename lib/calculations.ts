@@ -59,6 +59,7 @@ export function computeDashboardStats(sessions: ChargingSession[]): DashboardSta
       equivalentCycles: 0,
       totalDistance: 0,
       costPerKm: null,
+      kmPerKwh: null,
     };
   }
 
@@ -72,6 +73,12 @@ export function computeDashboardStats(sessions: ChargingSession[]): DashboardSta
   const totalDistance = sessions.reduce((sum, s) => sum + (s.distanceTravelled ?? 0), 0);
   const costPerKm = totalDistance > 0 ? totalExpenditure / totalDistance : null;
 
+  // Efficiency computed strictly over odometer-tracked sessions for accuracy
+  const odoSessions = sessions.filter((s) => (s.distanceTravelled ?? 0) > 0 && s.gridUnits > 0);
+  const odoDistance = odoSessions.reduce((sum, s) => sum + (s.distanceTravelled ?? 0), 0);
+  const odoGridUnits = odoSessions.reduce((sum, s) => sum + s.gridUnits, 0);
+  const kmPerKwh = odoDistance > 0 && odoGridUnits > 0 ? odoDistance / odoGridUnits : null;
+
   return {
     totalSessions,
     totalElectricity: round(totalElectricity, 2),
@@ -81,6 +88,7 @@ export function computeDashboardStats(sessions: ChargingSession[]): DashboardSta
     equivalentCycles: round(equivalentCycles, 2),
     totalDistance: round(totalDistance, 1),
     costPerKm: costPerKm !== null ? round(costPerKm, 2) : null,
+    kmPerKwh: kmPerKwh !== null ? round(kmPerKwh, 1) : null,
   };
 }
 

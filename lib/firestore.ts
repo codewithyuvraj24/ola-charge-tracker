@@ -126,7 +126,25 @@ export async function deleteScooter(
   userId: string,
   scooterId: string
 ): Promise<void> {
+  // 1. Delete all charging sessions linked to this scooter to prevent orphan records
+  const sessionsRef = collection(db, "users", userId, "chargingSessions");
+  const orphanSnap = await getDocs(query(sessionsRef, where("scooterId", "==", scooterId)));
+  const orphanIds = orphanSnap.docs.map((d) => d.id);
+  if (orphanIds.length > 0) {
+    await deleteChargingSessions(userId, orphanIds);
+  }
+
+  // 2. Delete the scooter doc itself
   await deleteDoc(doc(db, "users", userId, "scooters", scooterId));
+
+  // 3. Ensure a remaining scooter stays marked as default if needed
+  const remaining = await getScooters(userId);
+  if (remaining.length > 0 && !remaining.some((s) => s.isDefault)) {
+    await updateDoc(doc(db, "users", userId, "scooters", remaining[0].id), {
+      isDefault: true,
+      updatedAt: Timestamp.now(),
+    });
+  }
 }
 
 // ─── Charging Sessions ──────────────────────────────────────
@@ -263,14 +281,18 @@ export async function updateChargingSession(
   userId: string,
   sessionId: string,
   data: SessionFormData,
-  scooter: Scooter
+  scooter: Scooter,
+  specOverride?: { batteryCapacity?: number; chargingLoss?: number }
 ): Promise<void> {
+  const batteryCapacity = specOverride?.batteryCapacity ?? scooter.batteryCapacity;
+  const chargingLoss = specOverride?.chargingLoss ?? scooter.chargingLoss;
+
   const calc = calculateSession(
     data.startPercentage,
     data.endPercentage,
-    scooter.batteryCapacity,
+    batteryCapacity,
     data.electricityRate,
-    scooter.chargingLoss,
+    chargingLoss,
     typeof data.startOdometer === "number" ? data.startOdometer : undefined,
     typeof data.endOdometer === "number" ? data.endOdometer : undefined
   );
@@ -280,11 +302,11 @@ export async function updateChargingSession(
     startPercentage: data.startPercentage,
     endPercentage: data.endPercentage,
     addedPercentage: calc.addedPercentage,
-    batteryCapacity: scooter.batteryCapacity,
+    batteryCapacity,
     energyStored: calc.energyStored,
     gridUnits: calc.gridUnits,
     electricityRate: data.electricityRate,
-    chargingLoss: scooter.chargingLoss,
+    chargingLoss,
     totalCost: calc.totalCost,
     startOdometer: typeof data.startOdometer === "number" ? data.startOdometer : null,
     endOdometer: typeof data.endOdometer === "number" ? data.endOdometer : null,
@@ -293,6 +315,13 @@ export async function updateChargingSession(
     notes: data.notes || null,
     updatedAt: Timestamp.now(),
   });
+
+  if (
+    typeof data.endOdometer === "number" &&
+    data.endOdometer > (scooter.currentOdometer ?? 0)
+  ) {
+    await updateScooter(userId, scooter.id, { currentOdometer: data.endOdometer });
+  }
 }
 
 export async function deleteChargingSession(

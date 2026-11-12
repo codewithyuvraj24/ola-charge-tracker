@@ -108,6 +108,7 @@ export interface DashboardStats {
   equivalentCycles: number;
   totalDistance: number;
   costPerKm: number | null;
+  kmPerKwh: number | null;
 }
 
 // ─── Chart & Breakdown Data ──────────────────────────────────

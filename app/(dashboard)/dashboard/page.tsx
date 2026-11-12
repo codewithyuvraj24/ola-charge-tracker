@@ -10,9 +10,9 @@ import {
   computeSessionChartData,
   calculateSession,
 } from "@/lib/calculations";
-import { formatCurrency, formatNumber, formatDate, getDateRange } from "@/lib/utils";
-import type { ChargingSession, DateFilter } from "@/lib/types";
-import { DATE_FILTER_OPTIONS } from "@/lib/types";
+import { formatCurrency, formatNumber, formatDate, getDateRange, toLocalDateInputValue, parseLocalDateInput } from "@/lib/utils";
+import type { ChargingSession, DateFilter, TariffPreset } from "@/lib/types";
+import { DATE_FILTER_OPTIONS, DEFAULT_TARIFF_PRESETS } from "@/lib/types";
 import { VisualBatteryGauge } from "@/components/ui/battery-gauge";
 import { ChargePulseButton } from "@/components/ui/uiverse";
 import { Button } from "@/components/ui/button";
@@ -54,33 +54,41 @@ import {
 import {
   Plus,
   ArrowUpRight,
-  IndianRupee,
   Zap,
   Gauge,
   BatteryCharging,
   TrendingDown,
   Trash2,
   Wallet,
+  MapPin,
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
-
-const chartConfig = {
-  cost: {
-    label: "Charging Cost (₹)",
-    color: "hsl(var(--chart-1))",
-  },
-  gridUnits: {
-    label: "Grid Units (kWh)",
-    color: "hsl(var(--chart-2))",
-  },
-} satisfies ChartConfig;
 
 export default function DashboardPage() {
   const { user, userProfile } = useAuth();
   const { scooter, scooters, activeFilterScooterId, viewAllVehicles } = useScooter();
   const currency = userProfile?.currency || "₹";
   const monthlyBudget = userProfile?.monthlyBudget;
+  const presets: TariffPreset[] =
+    userProfile?.tariffPresets && userProfile.tariffPresets.length > 0
+      ? userProfile.tariffPresets
+      : DEFAULT_TARIFF_PRESETS;
+
+  const chartConfig = useMemo(
+    () =>
+      ({
+        cost: {
+          label: `Charging Cost (${currency})`,
+          color: "hsl(var(--chart-1))",
+        },
+        gridUnits: {
+          label: "Grid Units (kWh)",
+          color: "hsl(var(--chart-2))",
+        },
+      }) satisfies ChartConfig,
+    [currency]
+  );
 
   const [sessions, setSessions] = useState<ChargingSession[]>([]);
   const [monthSpend, setMonthSpend] = useState<number>(0);
@@ -89,17 +97,21 @@ export default function DashboardPage() {
   const [customStart, setCustomStart] = useState<string>(() => {
     const d = new Date();
     d.setDate(d.getDate() - 14);
-    return d.toISOString().split("T")[0];
+    return toLocalDateInputValue(d);
   });
   const [customEnd, setCustomEnd] = useState<string>(
-    () => new Date().toISOString().split("T")[0]
+    () => toLocalDateInputValue()
   );
 
   const [gaugeStart, setGaugeStart] = useState<number>(20);
   const [gaugeEnd, setGaugeEnd] = useState<number>(100);
+  const [quickLocation, setQuickLocation] = useState<string>("Home");
+  const [quickRate, setQuickRate] = useState<number | null>(null);
   const [loggingQuick, setLoggingQuick] = useState(false);
   const [deletingSession, setDeletingSession] = useState<ChargingSession | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const activeQuickRate = quickRate ?? scooter?.electricityRate ?? 12;
 
   const fetchSessions = async () => {
     if (!user) return;
@@ -109,9 +121,9 @@ export default function DashboardPage() {
       let end: Date | undefined;
 
       if (dateFilter === "custom") {
-        start = new Date(customStart);
+        start = parseLocalDateInput(customStart);
         start.setHours(0, 0, 0, 0);
-        end = new Date(customEnd);
+        end = parseLocalDateInput(customEnd);
         end.setHours(23, 59, 59, 999);
       } else if (dateFilter !== "all") {
         const range = getDateRange(dateFilter);
@@ -155,10 +167,10 @@ export default function DashboardPage() {
       gaugeStart,
       gaugeEnd,
       scooter.batteryCapacity,
-      scooter.electricityRate,
+      activeQuickRate,
       scooter.chargingLoss
     );
-  }, [gaugeStart, gaugeEnd, scooter]);
+  }, [gaugeStart, gaugeEnd, scooter, activeQuickRate]);
 
   const handleLogFromGauge = async () => {
     if (!user || !scooter || !quickCalc) return;
@@ -170,13 +182,13 @@ export default function DashboardPage() {
           date: new Date(),
           startPercentage: gaugeStart,
           endPercentage: gaugeEnd,
-          electricityRate: scooter.electricityRate,
-          location: "Home",
+          electricityRate: activeQuickRate,
+          location: quickLocation,
           notes: "Quick telemetry log",
         },
         scooter
       );
-      toast.success(`Session saved (${formatCurrency(quickCalc.totalCost, currency)})`);
+      toast.success(`Session saved (${formatCurrency(quickCalc.totalCost, currency)} • ${quickLocation})`);
       await fetchSessions();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to record session";
@@ -232,7 +244,7 @@ export default function DashboardPage() {
           endPct={gaugeEnd}
           capacityKwh={scooter?.batteryCapacity || 4}
           lossPct={scooter?.chargingLoss ?? 10}
-          ratePerKwh={scooter?.electricityRate || 12}
+          ratePerKwh={activeQuickRate}
           currency={currency}
           onRangeChange={(s, e) => {
             setGaugeStart(s);
@@ -282,6 +294,44 @@ export default function DashboardPage() {
                 : `Quick Log (${quickCalc ? formatCurrency(quickCalc.totalCost, currency) : `${currency}0.00`})`}
             </span>
           </ChargePulseButton>
+        </div>
+
+        {/* 1-tap Tariff & Location Preset Bar for Quick Log */}
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground mr-1">
+            <MapPin className="h-3 w-3 text-primary" />
+            Preset:
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            variant={quickRate === null && quickLocation === "Home" ? "secondary" : "outline"}
+            onClick={() => {
+              setQuickLocation("Home");
+              setQuickRate(null);
+            }}
+            className="h-7 px-2.5 text-[11px] font-mono-num"
+          >
+            Vehicle Default ({currency}{scooter?.electricityRate ?? 12}/kWh)
+          </Button>
+          {presets.map((p) => {
+            const active = quickLocation === p.location && quickRate === p.rate;
+            return (
+              <Button
+                key={p.id}
+                type="button"
+                size="sm"
+                variant={active ? "secondary" : "outline"}
+                onClick={() => {
+                  setQuickLocation(p.location);
+                  setQuickRate(p.rate);
+                }}
+                className="h-7 px-2.5 text-[11px] font-mono-num"
+              >
+                {p.label} ({p.rate === 0 ? "Free" : `${currency}${p.rate}/kWh`})
+              </Button>
+            );
+          })}
         </div>
       </div>
 
@@ -392,7 +442,9 @@ export default function DashboardPage() {
               <CardTitle className="text-xs font-medium text-muted-foreground">
                 Total Spend
               </CardTitle>
-              <IndianRupee className="h-4 w-4 text-primary" />
+              <span className="text-xs font-bold font-mono-num text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                {currency}
+              </span>
             </CardHeader>
             <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0">
               <div className="text-2xl font-bold font-mono-num">
@@ -502,7 +554,16 @@ export default function DashboardPage() {
                 <YAxis tickLine={false} axisLine={false} fontSize={11} />
                 <ChartTooltip
                   cursor={false}
-                  content={<ChartTooltipContent indicator="line" />}
+                  content={
+                    <ChartTooltipContent
+                      indicator="line"
+                      formatter={(value) => (
+                        <span className="font-mono-num font-semibold text-foreground">
+                          {formatCurrency(Number(value), currency)}
+                        </span>
+                      )}
+                    />
+                  }
                 />
                 <Area
                   dataKey="cost"

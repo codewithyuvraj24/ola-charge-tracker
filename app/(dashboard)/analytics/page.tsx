@@ -11,9 +11,11 @@ import {
   computeLocationData,
   computeEvVsPetrolSavings,
 } from "@/lib/calculations";
-import { formatCurrency, formatNumber, formatDate } from "@/lib/utils";
-import type { ChargingSession } from "@/lib/types";
+import { formatCurrency, formatNumber, formatDate, getDateRange, toLocalDateInputValue, parseLocalDateInput } from "@/lib/utils";
+import type { ChargingSession, DateFilter } from "@/lib/types";
+import { DATE_FILTER_OPTIONS } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,16 +60,37 @@ export default function AnalyticsPage() {
 
   const [sessions, setSessions] = useState<ChargingSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [customStart, setCustomStart] = useState<string>(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 3);
+    return toLocalDateInputValue(d);
+  });
+  const [customEnd, setCustomEnd] = useState<string>(() => toLocalDateInputValue());
 
   useEffect(() => {
     async function load() {
       if (!user) return;
       try {
         setLoading(true);
+        let start: Date | undefined;
+        let end: Date | undefined;
+
+        if (dateFilter === "custom") {
+          start = parseLocalDateInput(customStart);
+          start.setHours(0, 0, 0, 0);
+          end = parseLocalDateInput(customEnd);
+          end.setHours(23, 59, 59, 999);
+        } else if (dateFilter !== "all") {
+          const range = getDateRange(dateFilter);
+          start = range.start;
+          end = range.end;
+        }
+
         const data = await getChargingSessions(
           user.uid,
-          undefined,
-          undefined,
+          start,
+          end,
           activeFilterScooterId
         );
         setSessions(data);
@@ -78,7 +101,7 @@ export default function AnalyticsPage() {
       }
     }
     load();
-  }, [user, activeFilterScooterId]);
+  }, [user, activeFilterScooterId, dateFilter, customStart, customEnd]);
 
   const stats = useMemo(() => computeDashboardStats(sessions), [sessions]);
   const monthlyData = useMemo(() => computeMonthlyData(sessions), [sessions]);
@@ -147,6 +170,49 @@ export default function AnalyticsPage() {
             ? `Aggregated metrics across all ${scooters.length} vehicles`
             : `${scooter?.name || "Vehicle"} • Long-term energy, cycle & savings insights`}
         </p>
+      </div>
+
+      {/* Timeframe Filter Bar */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card/50 p-2">
+          <span className="text-xs font-medium text-muted-foreground px-2">Timeframe</span>
+          <div className="flex flex-wrap gap-1">
+            {DATE_FILTER_OPTIONS.map((opt) => (
+              <Button
+                key={opt.value}
+                size="sm"
+                variant={dateFilter === opt.value ? "default" : "ghost"}
+                onClick={() => setDateFilter(opt.value)}
+                className="h-7 px-2.5 text-xs"
+              >
+                {opt.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {dateFilter === "custom" && (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card/50 p-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">From</span>
+              <Input
+                type="date"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="h-8 w-auto text-xs font-mono-num"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">To</span>
+              <Input
+                type="date"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="h-8 w-auto text-xs font-mono-num"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* EV vs Petrol Savings + Smart Insights Cards */}
@@ -313,7 +379,7 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader className="p-4 pb-1">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-medium">Cost / km</span>
+              <span className="text-xs font-medium">Cost / km &amp; Efficiency</span>
               <Gauge className="h-4 w-4 text-primary" />
             </div>
             <CardTitle className="text-xl font-bold font-mono-num mt-1">
@@ -321,9 +387,11 @@ export default function AnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-1 text-[11px] text-muted-foreground">
-            {stats.totalDistance > 0
-              ? `${formatNumber(stats.totalDistance, 0)} km tracked`
-              : "Add odometer to track"}
+            {stats.kmPerKwh !== null
+              ? `${formatNumber(stats.kmPerKwh, 1)} km/kWh (${Math.round(1000 / stats.kmPerKwh)} Wh/km)`
+              : stats.totalDistance > 0
+                ? `${formatNumber(stats.totalDistance, 0)} km tracked`
+                : "Add odometer to track"}
           </CardContent>
         </Card>
       </div>
@@ -397,7 +465,17 @@ export default function AnalyticsPage() {
                   <CartesianGrid vertical={false} strokeDasharray="3 3" />
                   <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={11} />
                   <YAxis tickLine={false} axisLine={false} fontSize={11} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        formatter={(value) => (
+                          <span className="font-mono-num font-semibold text-foreground">
+                            {formatCurrency(Number(value), currency)}
+                          </span>
+                        )}
+                      />
+                    }
+                  />
                   <Bar
                     dataKey="expenditure"
                     fill="var(--color-expenditure)"
@@ -429,7 +507,18 @@ export default function AnalyticsPage() {
                   <CartesianGrid vertical={false} strokeDasharray="3 3" />
                   <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={11} />
                   <YAxis tickLine={false} axisLine={false} fontSize={11} />
-                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        indicator="line"
+                        formatter={(value) => (
+                          <span className="font-mono-num font-semibold text-foreground">
+                            {formatNumber(Number(value), 2)} kWh
+                          </span>
+                        )}
+                      />
+                    }
+                  />
                   <Area
                     type="monotone"
                     dataKey="electricity"

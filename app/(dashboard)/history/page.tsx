@@ -10,7 +10,7 @@ import {
   updateChargingSession,
   importChargingSessions,
 } from "@/lib/firestore";
-import { formatCurrency, formatNumber, formatDate } from "@/lib/utils";
+import { formatCurrency, formatNumber, formatDate, toLocalDateInputValue, parseLocalDateInput } from "@/lib/utils";
 import type { ChargingSession, SessionFormData } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,7 +65,7 @@ import * as XLSX from "xlsx";
 
 export default function HistoryPage() {
   const { user, userProfile } = useAuth();
-  const { scooter, activeFilterScooterId } = useScooter();
+  const { scooter, scooters, activeFilterScooterId } = useScooter();
   const currency = userProfile?.currency || "₹";
   const [sessions, setSessions] = useState<ChargingSession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,8 +132,20 @@ export default function HistoryPage() {
 
   // Filter & Sort
   const filteredSessions = useMemo(() => {
-    const startBoundary = fromDate ? new Date(`${fromDate}T00:00:00`) : null;
-    const endBoundary = toDate ? new Date(`${toDate}T23:59:59`) : null;
+    const startBoundary = fromDate
+      ? (() => {
+          const d = parseLocalDateInput(fromDate);
+          d.setHours(0, 0, 0, 0);
+          return d;
+        })()
+      : null;
+    const endBoundary = toDate
+      ? (() => {
+          const d = parseLocalDateInput(toDate);
+          d.setHours(23, 59, 59, 999);
+          return d;
+        })()
+      : null;
 
     return sessions
       .filter((s) => {
@@ -181,6 +193,8 @@ export default function HistoryPage() {
       return;
     }
 
+    const csvEscape = (val: string) => `"${val.replace(/"/g, '""')}"`;
+
     const headers = [
       "Session ID",
       "Date",
@@ -190,9 +204,9 @@ export default function HistoryPage() {
       "Battery Capacity (kWh)",
       "Energy Stored (kWh)",
       "Grid Units (kWh)",
-      "Rate (₹/kWh)",
+      `Rate (${currency}/kWh)`,
       "Charging Loss %",
-      "Total Cost (₹)",
+      `Total Cost (${currency})`,
       "Start Odometer",
       "End Odometer",
       "Distance (km)",
@@ -201,8 +215,8 @@ export default function HistoryPage() {
     ];
 
     const rows = filteredSessions.map((s) => [
-      s.id,
-      formatDate(s.date.toDate()),
+      csvEscape(s.id),
+      csvEscape(toLocalDateInputValue(s.date.toDate())),
       s.startPercentage,
       s.endPercentage,
       s.addedPercentage,
@@ -215,21 +229,20 @@ export default function HistoryPage() {
       s.startOdometer ?? "",
       s.endOdometer ?? "",
       s.distanceTravelled ?? "",
-      `"${(s.location || "").replace(/"/g, '""')}"`,
-      `"${(s.notes || "").replace(/"/g, '""')}"`,
+      csvEscape(s.location || ""),
+      csvEscape(s.notes || ""),
     ]);
 
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = [headers.map(csvEscape).join(","), ...rows.map((e) => e.join(","))].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `ola-charging-history-${new Date().toISOString().split("T")[0]}.csv`);
+    link.href = url;
+    link.download = `ola-charging-history-${toLocalDateInputValue()}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     toast.success("CSV export downloaded");
   };
 
@@ -240,6 +253,8 @@ export default function HistoryPage() {
       return;
     }
 
+    const rateCol = `Rate (${currency}/kWh)`;
+    const costCol = `Total Cost (${currency})`;
     const data = filteredSessions.map((s) => ({
       Date: formatDate(s.date.toDate()),
       "Start %": s.startPercentage,
@@ -248,9 +263,9 @@ export default function HistoryPage() {
       "Battery (kWh)": s.batteryCapacity,
       "Energy Stored (kWh)": s.energyStored,
       "Grid Units (kWh)": s.gridUnits,
-      "Rate (₹/kWh)": s.electricityRate,
+      [rateCol]: s.electricityRate,
       "Loss %": s.chargingLoss,
-      "Total Cost (₹)": s.totalCost,
+      [costCol]: s.totalCost,
       "Start Odo (km)": s.startOdometer || "",
       "End Odo (km)": s.endOdometer || "",
       "Distance (km)": s.distanceTravelled || "",
@@ -261,7 +276,7 @@ export default function HistoryPage() {
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Charging History");
-    XLSX.writeFile(workbook, `ola-charging-history-${new Date().toISOString().split("T")[0]}.xlsx`);
+    XLSX.writeFile(workbook, `ola-charging-history-${toLocalDateInputValue()}.xlsx`);
     toast.success("Excel export downloaded");
   };
 
@@ -269,7 +284,7 @@ export default function HistoryPage() {
   const handleOpenEdit = (s: ChargingSession) => {
     setEditingSession(s);
     setEditForm({
-      dateStr: s.date.toDate().toISOString().split("T")[0],
+      dateStr: toLocalDateInputValue(s.date.toDate()),
       startPercentage: s.startPercentage,
       endPercentage: s.endPercentage,
       electricityRate: s.electricityRate,
@@ -288,13 +303,16 @@ export default function HistoryPage() {
       return;
     }
 
+    const targetScooter =
+      scooters.find((sc) => sc.id === editingSession.scooterId) || scooter;
+
     setSavingEdit(true);
     try {
       await updateChargingSession(
         user.uid,
         editingSession.id,
         {
-          date: new Date(editForm.dateStr),
+          date: parseLocalDateInput(editForm.dateStr),
           startPercentage: Number(editForm.startPercentage),
           endPercentage: Number(editForm.endPercentage),
           electricityRate: Number(editForm.electricityRate),
@@ -303,7 +321,11 @@ export default function HistoryPage() {
           location: editForm.location.trim() || undefined,
           notes: editForm.notes.trim() || undefined,
         },
-        scooter
+        targetScooter,
+        {
+          batteryCapacity: editingSession.batteryCapacity,
+          chargingLoss: editingSession.chargingLoss,
+        }
       );
       toast.success("Charging session updated");
       setEditingSession(null);
@@ -379,7 +401,12 @@ export default function HistoryPage() {
       for (let i = 0; i < line.length; i++) {
         const ch = line[i];
         if (ch === '"') {
-          inQuotes = !inQuotes;
+          if (inQuotes && line[i + 1] === '"') {
+            cur += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
         } else if (ch === "," && !inQuotes) {
           cells.push(cur.trim());
           cur = "";
@@ -389,6 +416,18 @@ export default function HistoryPage() {
       }
       cells.push(cur.trim());
       return cells;
+    };
+
+    const parseFlexibleDate = (raw: string): Date => {
+      const trimmed = (raw || "").trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        return parseLocalDateInput(trimmed);
+      }
+      const dmy = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/.exec(trimmed);
+      if (dmy) {
+        return new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]), 12, 0, 0, 0);
+      }
+      return new Date(trimmed);
     };
 
     const headers = parseLine(lines[0]).map((h) => h.toLowerCase());
@@ -409,7 +448,7 @@ export default function HistoryPage() {
       const ePct = parseFloat(idxEnd >= 0 ? cols[idxEnd] : cols[2]);
       const rVal = idxRate >= 0 ? parseFloat(cols[idxRate]) : scooter?.electricityRate || 12;
 
-      const parsedDate = new Date(dRaw);
+      const parsedDate = parseFlexibleDate(dRaw);
       if (isNaN(parsedDate.getTime()) || isNaN(sPct) || isNaN(ePct) || ePct <= sPct) {
         continue;
       }

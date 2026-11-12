@@ -10,8 +10,11 @@ export const metadata: Metadata = {
     "Track electric scooter charging sessions, electricity consumption, power costs, and battery health analytics.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icon.svg",
-    apple: "/icon.svg",
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   appleWebApp: {
     capable: true,
@@ -35,6 +38,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('app_theme_v2');var v=['cobalt','daylight','amber','mint','crimson'];var a=v.indexOf(t)!==-1?t:'cobalt';var r=document.documentElement;r.setAttribute('data-theme',a);if(a==='daylight'){r.classList.remove('dark');}else{r.classList.add('dark');}}catch(e){}})();`;
+
 export default function RootLayout({
   children,
 }: {
@@ -42,6 +47,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body>
         <ThemeProvider defaultTheme="cobalt">
           <AuthProvider>

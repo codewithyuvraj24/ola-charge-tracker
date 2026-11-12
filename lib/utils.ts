@@ -30,6 +30,28 @@ export function formatDateShort(date: Date | string): string {
   });
 }
 
+/**
+ * Formats a Date into local YYYY-MM-DD for <input type="date"> without UTC day-shift.
+ */
+export function toLocalDateInputValue(date: Date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Parses a YYYY-MM-DD <input type="date"> string at local noon to prevent UTC timezone day shifts.
+ */
+export function parseLocalDateInput(dateStr: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr.trim());
+  if (!match) return new Date(dateStr);
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  return new Date(year, month, day, 12, 0, 0, 0);
+}
+
 export function getDateRange(filter: string): { start: Date; end: Date } {
   const now = new Date();
   const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
