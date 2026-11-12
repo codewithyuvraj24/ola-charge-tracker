@@ -1,5 +1,19 @@
 import { Timestamp } from "firebase/firestore";
 
+// ─── Tariff Presets ──────────────────────────────────────────
+export interface TariffPreset {
+  id: string;
+  label: string;
+  location: string;
+  rate: number;
+}
+
+export const DEFAULT_TARIFF_PRESETS: TariffPreset[] = [
+  { id: "home", label: "Home Plug", location: "Home", rate: 12 },
+  { id: "office", label: "Office Free", location: "Office", rate: 0 },
+  { id: "hyper", label: "Hypercharger", location: "Ola Hypercharger", rate: 18 },
+];
+
 // ─── User ────────────────────────────────────────────────────
 export interface UserProfile {
   uid: string;
@@ -8,6 +22,10 @@ export interface UserProfile {
   currency: string;
   theme: "light" | "dark" | "system";
   onboardingComplete: boolean;
+  monthlyBudget?: number;
+  petrolPrice?: number;
+  petrolMileage?: number;
+  tariffPresets?: TariffPreset[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -18,7 +36,7 @@ export interface Scooter {
   name: string;
   model: string;
   batteryCapacity: number; // kWh
-  electricityRate: number; // ₹/kWh
+  electricityRate: number; // per kWh
   chargingLoss: number;    // percentage (0-100)
   registrationNumber?: string;
   currentOdometer?: number;
@@ -48,8 +66,8 @@ export interface ChargingSession {
   batteryCapacity: number;
   energyStored: number;     // kWh
   gridUnits: number;        // kWh
-  electricityRate: number;   // ₹/kWh
-  chargingLoss: number;      // percentage
+  electricityRate: number;  // per kWh
+  chargingLoss: number;     // percentage
   totalCost: number;
   startOdometer?: number;
   endOdometer?: number;
@@ -87,11 +105,12 @@ export interface DashboardStats {
   totalExpenditure: number;
   averageCost: number;
   averageAdded: number;
+  equivalentCycles: number;
   totalDistance: number;
   costPerKm: number | null;
 }
 
-// ─── Chart Data ──────────────────────────────────────────────
+// ─── Chart & Breakdown Data ──────────────────────────────────
 export interface MonthlyData {
   month: string;
   expenditure: number;
@@ -104,6 +123,13 @@ export interface SessionChartData {
   cost: number;
   added: number;
   gridUnits: number;
+}
+
+export interface LocationBreakdown {
+  location: string;
+  expenditure: number;
+  electricity: number;
+  sessions: number;
 }
 
 // ─── Defaults ────────────────────────────────────────────────
@@ -136,5 +162,5 @@ export const DATE_FILTER_OPTIONS: { value: DateFilter; label: string }[] = [
   { value: "6m", label: "Last 6 months" },
   { value: "1y", label: "This year" },
   { value: "all", label: "All time" },
+  { value: "custom", label: "Custom" },
 ];
-

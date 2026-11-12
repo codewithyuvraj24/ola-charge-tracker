@@ -1,17 +1,19 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useScooter } from "@/lib/scooter-context";
-import { addChargingSession } from "@/lib/firestore";
+import { addChargingSession, getChargingSessions } from "@/lib/firestore";
 import { calculateSession } from "@/lib/calculations";
+import { DEFAULT_TARIFF_PRESETS } from "@/lib/types";
 import { VisualBatteryGauge } from "@/components/ui/battery-gauge";
 import { ChargePulseButton } from "@/components/ui/uiverse";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Accordion,
@@ -19,13 +21,18 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Zap, BatteryCharging } from "lucide-react";
+import { Zap, BatteryCharging, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AddSessionPage() {
   const router = useRouter();
-  const { user } = useAuth();
-  const { scooter } = useScooter();
+  const { user, userProfile } = useAuth();
+  const { scooter, refreshScooter } = useScooter();
+
+  const currency = userProfile?.currency || "₹";
+  const presets = userProfile?.tariffPresets?.length
+    ? userProfile.tariffPresets
+    : DEFAULT_TARIFF_PRESETS;
 
   const [dateStr, setDateStr] = useState(new Date().toISOString().split("T")[0]);
   const [startPct, setStartPct] = useState<number>(20);
@@ -35,17 +42,49 @@ export default function AddSessionPage() {
   const [startOdo, setStartOdo] = useState<string>(
     scooter?.currentOdometer ? String(scooter.currentOdometer) : ""
   );
+  const [lastOdoHint, setLastOdoHint] = useState<number | null>(
+    scooter?.currentOdometer ?? null
+  );
   const [endOdo, setEndOdo] = useState<string>("");
   const [location, setLocation] = useState<string>("Home");
   const [notes, setNotes] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Sync scooter tariff & smart odometer auto-fill from latest session
+  useEffect(() => {
+    if (scooter) {
+      setRate(scooter.electricityRate);
+      if (scooter.currentOdometer && !startOdo) {
+        setStartOdo(String(scooter.currentOdometer));
+        setLastOdoHint(scooter.currentOdometer);
+      }
+    }
+  }, [scooter]);
+
+  useEffect(() => {
+    async function loadLatestOdo() {
+      if (!user || !scooter) return;
+      try {
+        const list = await getChargingSessions(user.uid, undefined, undefined, scooter.id);
+        const withOdo = list.find((s) => typeof s.endOdometer === "number" && s.endOdometer > 0);
+        const bestOdo = withOdo?.endOdometer ?? scooter.currentOdometer ?? null;
+        if (bestOdo && !startOdo) {
+          setStartOdo(String(bestOdo));
+        }
+        setLastOdoHint(bestOdo);
+      } catch {
+        // Non-fatal smart helper
+      }
+    }
+    loadLatestOdo();
+  }, [user, scooter?.id]);
 
   const calc = useMemo(() => {
     const sPct = Number(startPct) || 0;
     const ePct = Number(endPct) || 0;
     const capacity = scooter?.batteryCapacity || 4;
     const loss = scooter?.chargingLoss ?? 10;
-    const r = Number(rate) || 12;
+    const r = Number(rate) || 0;
 
     const sOdo = startOdo ? parseFloat(startOdo) : undefined;
     const eOdo = endOdo ? parseFloat(endOdo) : undefined;
@@ -88,6 +127,7 @@ export default function AddSessionPage() {
         scooter
       );
 
+      await refreshScooter();
       toast.success("Charging session logged successfully!");
       router.push("/dashboard");
     } catch (err: unknown) {
@@ -112,6 +152,46 @@ export default function AddSessionPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Location & Tariff Presets */}
+        <Card>
+          <CardContent className="p-3.5 sm:p-4 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="flex items-center gap-1.5 font-medium text-muted-foreground">
+                <MapPin className="h-3.5 w-3.5 text-primary" />
+                Location &amp; Tariff Preset
+              </span>
+              <Badge variant="outline" className="font-mono-num text-[10px]">
+                {location || "Custom"} • {currency}{rate}/kWh
+              </Badge>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {presets.map((p) => {
+                const isSelected =
+                  location.toLowerCase() === p.location.toLowerCase() &&
+                  Number(rate) === Number(p.rate);
+                return (
+                  <Button
+                    key={p.id}
+                    type="button"
+                    size="sm"
+                    variant={isSelected ? "default" : "outline"}
+                    onClick={() => {
+                      setLocation(p.location);
+                      setRate(p.rate);
+                    }}
+                    className="h-8 px-2.5 text-xs ios-touch"
+                  >
+                    <span>{p.label}</span>
+                    <span className="ml-1.5 font-mono-num opacity-80">
+                      {currency}{p.rate}
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Live shadcn/ui Interactive Battery Pack Gauge */}
         <VisualBatteryGauge
           startPct={startPct}
@@ -119,6 +199,7 @@ export default function AddSessionPage() {
           capacityKwh={scooter?.batteryCapacity || 4}
           lossPct={scooter?.chargingLoss ?? 10}
           ratePerKwh={rate}
+          currency={currency}
           onRangeChange={(s, e) => {
             setStartPct(s);
             setEndPct(e);
@@ -212,12 +293,14 @@ export default function AddSessionPage() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="session-rate">Electricity Rate (₹/kWh)</Label>
+                      <Label htmlFor="session-rate">
+                        Electricity Rate ({currency}/kWh)
+                      </Label>
                       <Input
                         id="session-rate"
                         type="number"
                         step="0.5"
-                        min="0.1"
+                        min="0"
                         value={rate}
                         onChange={(e) => setRate(parseFloat(e.target.value) || 0)}
                       />
@@ -226,7 +309,14 @@ export default function AddSessionPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label htmlFor="start-odo">Start Odometer (km)</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="start-odo">Start Odometer (km)</Label>
+                        {lastOdoHint !== null && (
+                          <span className="text-[10px] text-primary font-mono-num">
+                            Last: {lastOdoHint} km
+                          </span>
+                        )}
+                      </div>
                       <Input
                         id="start-odo"
                         type="number"

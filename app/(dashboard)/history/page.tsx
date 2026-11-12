@@ -8,9 +8,10 @@ import {
   deleteChargingSession,
   deleteChargingSessions,
   updateChargingSession,
+  importChargingSessions,
 } from "@/lib/firestore";
 import { formatCurrency, formatNumber, formatDate } from "@/lib/utils";
-import type { ChargingSession } from "@/lib/types";
+import type { ChargingSession, SessionFormData } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,20 +58,30 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
 export default function HistoryPage() {
-  const { user } = useAuth();
-  const { scooter } = useScooter();
+  const { user, userProfile } = useAuth();
+  const { scooter, activeFilterScooterId } = useScooter();
+  const currency = userProfile?.currency || "₹";
   const [sessions, setSessions] = useState<ChargingSession[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Search & Filter & Sort state
   const [searchQuery, setSearchQuery] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "cost">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  // CSV Import state
+  const [importOpen, setImportOpen] = useState(false);
+  const [parsedImportRows, setParsedImportRows] = useState<SessionFormData[]>([]);
+  const [importFileName, setImportFileName] = useState("");
+  const [importing, setImporting] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -100,7 +111,12 @@ export default function HistoryPage() {
     if (!user) return;
     try {
       setLoading(true);
-      const list = await getChargingSessions(user.uid);
+      const list = await getChargingSessions(
+        user.uid,
+        undefined,
+        undefined,
+        activeFilterScooterId
+      );
       setSessions(list);
     } catch (err) {
       console.error(err);
@@ -112,16 +128,23 @@ export default function HistoryPage() {
 
   useEffect(() => {
     fetchSessions();
-  }, [user]);
+  }, [user, activeFilterScooterId]);
 
   // Filter & Sort
   const filteredSessions = useMemo(() => {
+    const startBoundary = fromDate ? new Date(`${fromDate}T00:00:00`) : null;
+    const endBoundary = toDate ? new Date(`${toDate}T23:59:59`) : null;
+
     return sessions
       .filter((s) => {
+        const d = s.date.toDate();
+        if (startBoundary && d < startBoundary) return false;
+        if (endBoundary && d > endBoundary) return false;
+
         const q = searchQuery.toLowerCase();
         const loc = (s.location || "").toLowerCase();
         const notes = (s.notes || "").toLowerCase();
-        const dateStr = formatDate(s.date.toDate()).toLowerCase();
+        const dateStr = formatDate(d).toLowerCase();
         return loc.includes(q) || notes.includes(q) || dateStr.includes(q);
       })
       .sort((a, b) => {
@@ -133,7 +156,7 @@ export default function HistoryPage() {
           return sortOrder === "asc" ? diff : -diff;
         }
       });
-  }, [sessions, searchQuery, sortBy, sortOrder]);
+  }, [sessions, searchQuery, fromDate, toDate, sortBy, sortOrder]);
 
   // Paginated records
   const totalPages = Math.ceil(filteredSessions.length / pageSize) || 1;
@@ -332,6 +355,104 @@ export default function HistoryPage() {
     }
   };
 
+  // CSV Import File Parser
+  const handleCsvFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportFileName(file.name);
+    const text = await file.text();
+    const lines = text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    if (lines.length < 2) {
+      toast.error("CSV file needs a header row and at least one data row");
+      setParsedImportRows([]);
+      return;
+    }
+
+    const parseLine = (line: string): string[] => {
+      const cells: string[] = [];
+      let cur = "";
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          inQuotes = !inQuotes;
+        } else if (ch === "," && !inQuotes) {
+          cells.push(cur.trim());
+          cur = "";
+        } else {
+          cur += ch;
+        }
+      }
+      cells.push(cur.trim());
+      return cells;
+    };
+
+    const headers = parseLine(lines[0]).map((h) => h.toLowerCase());
+    const idxDate = headers.findIndex((h) => h.includes("date"));
+    const idxStart = headers.findIndex((h) => h.includes("start %") || h === "start" || h.includes("startpct"));
+    const idxEnd = headers.findIndex((h) => h.includes("end %") || h === "end" || h.includes("endpct"));
+    const idxRate = headers.findIndex((h) => h.includes("rate"));
+    const idxSOdo = headers.findIndex((h) => h.includes("start odo"));
+    const idxEOdo = headers.findIndex((h) => h.includes("end odo"));
+    const idxLoc = headers.findIndex((h) => h.includes("location"));
+    const idxNotes = headers.findIndex((h) => h.includes("note"));
+
+    const rows: SessionFormData[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = parseLine(lines[i]);
+      const dRaw = idxDate >= 0 ? cols[idxDate] : cols[0];
+      const sPct = parseFloat(idxStart >= 0 ? cols[idxStart] : cols[1]);
+      const ePct = parseFloat(idxEnd >= 0 ? cols[idxEnd] : cols[2]);
+      const rVal = idxRate >= 0 ? parseFloat(cols[idxRate]) : scooter?.electricityRate || 12;
+
+      const parsedDate = new Date(dRaw);
+      if (isNaN(parsedDate.getTime()) || isNaN(sPct) || isNaN(ePct) || ePct <= sPct) {
+        continue;
+      }
+
+      const sOdo = idxSOdo >= 0 && cols[idxSOdo] ? parseFloat(cols[idxSOdo]) : undefined;
+      const eOdo = idxEOdo >= 0 && cols[idxEOdo] ? parseFloat(cols[idxEOdo]) : undefined;
+
+      rows.push({
+        date: parsedDate,
+        startPercentage: Math.max(0, Math.min(99, sPct)),
+        endPercentage: Math.max(1, Math.min(100, ePct)),
+        electricityRate: isNaN(rVal) ? scooter?.electricityRate || 12 : rVal,
+        startOdometer: sOdo && !isNaN(sOdo) ? sOdo : undefined,
+        endOdometer: eOdo && !isNaN(eOdo) ? eOdo : undefined,
+        location: idxLoc >= 0 ? cols[idxLoc] || undefined : undefined,
+        notes: idxNotes >= 0 ? cols[idxNotes] || undefined : undefined,
+      });
+    }
+
+    setParsedImportRows(rows);
+    if (rows.length === 0) {
+      toast.error("No valid charging rows found in that CSV");
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!user || !scooter || parsedImportRows.length === 0) return;
+    setImporting(true);
+    try {
+      const count = await importChargingSessions(user.uid, parsedImportRows, scooter);
+      toast.success(`Imported ${count} charging logs`);
+      setImportOpen(false);
+      setParsedImportRows([]);
+      setImportFileName("");
+      await fetchSessions();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to import CSV";
+      toast.error(msg);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   // Bulk delete selected or all sessions
   const handleConfirmBulkDelete = async () => {
     if (!user || !bulkDeleteMode) return;
@@ -391,6 +512,15 @@ export default function HistoryPage() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => setImportOpen(true)}
+            className="text-xs"
+          >
+            <Upload className="mr-1.5 h-3.5 w-3.5" />
+            Import CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleExportCSV}
             disabled={filteredSessions.length === 0}
             className="text-xs"
@@ -422,8 +552,8 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      {/* Search and Sort Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between p-3 rounded-xl bg-card/60 border border-border/60">
+      {/* Search, Custom Date Range & Sort Toolbar */}
+      <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between p-3 rounded-xl bg-card/60 border border-border/60">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -437,7 +567,41 @@ export default function HistoryPage() {
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            type="date"
+            value={fromDate}
+            onChange={(e) => {
+              setFromDate(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="h-8 w-auto text-xs font-mono-num"
+            aria-label="Filter from date"
+          />
+          <span className="text-xs text-muted-foreground">→</span>
+          <Input
+            type="date"
+            value={toDate}
+            onChange={(e) => {
+              setToDate(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="h-8 w-auto text-xs font-mono-num"
+            aria-label="Filter to date"
+          />
+          {(fromDate || toDate) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFromDate("");
+                setToDate("");
+              }}
+              className="h-8 px-2 text-xs text-muted-foreground"
+            >
+              Reset
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -533,10 +697,10 @@ export default function HistoryPage() {
                           {formatNumber(s.gridUnits, 2)} units
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
-                          ₹{s.electricityRate}
+                          {currency}{s.electricityRate}
                         </TableCell>
                         <TableCell className="text-xs font-bold text-foreground">
-                          {formatCurrency(s.totalCost)}
+                          {formatCurrency(s.totalCost, currency)}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {s.distanceTravelled !== undefined && s.distanceTravelled !== null
@@ -598,7 +762,7 @@ export default function HistoryPage() {
                         )}
                       </div>
                       <div className="font-bold text-base text-primary">
-                        {formatCurrency(s.totalCost)}
+                        {formatCurrency(s.totalCost, currency)}
                       </div>
                     </div>
 
@@ -621,7 +785,7 @@ export default function HistoryPage() {
 
                     <div className="flex items-center justify-between text-xs pt-1">
                       <span className="text-muted-foreground text-[11px]">
-                        Rate: ₹{s.electricityRate} • Loss: {s.chargingLoss}%
+                        Rate: {currency}{s.electricityRate} • Loss: {s.chargingLoss}%
                       </span>
                       <div className="flex items-center gap-1">
                         <Button
@@ -711,7 +875,7 @@ export default function HistoryPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="edit-rate">Rate (₹/kWh)</Label>
+                <Label htmlFor="edit-rate">Rate ({currency}/kWh)</Label>
                 <Input
                   id="edit-rate"
                   type="number"
@@ -802,6 +966,69 @@ export default function HistoryPage() {
             <Button onClick={handleSaveEdit} disabled={savingEdit}>
               {savingEdit && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CSV Import Dialog */}
+      <Dialog
+        open={importOpen}
+        onOpenChange={(open) => {
+          if (!importing) {
+            setImportOpen(open);
+            if (!open) {
+              setParsedImportRows([]);
+              setImportFileName("");
+            }
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Import Charging Logs (CSV)</DialogTitle>
+            <DialogDescription>
+              Upload a CSV exported from Ola Charge Tracker or any sheet with{" "}
+              <span className="font-mono text-xs">Date, Start %, End %, Rate</span> columns.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <Input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleCsvFileChange}
+              className="cursor-pointer text-xs"
+            />
+            {importFileName && (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs space-y-1">
+                <div className="font-medium text-foreground">{importFileName}</div>
+                <div className="text-muted-foreground">
+                  Ready to import{" "}
+                  <strong className="text-primary font-mono-num">
+                    {parsedImportRows.length}
+                  </strong>{" "}
+                  valid session{parsedImportRows.length === 1 ? "" : "s"} into{" "}
+                  <strong>{scooter?.name || "active scooter"}</strong>.
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={importing}
+              onClick={() => setImportOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={importing || parsedImportRows.length === 0}
+              onClick={handleConfirmImport}
+            >
+              {importing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Import {parsedImportRows.length > 0 ? `(${parsedImportRows.length})` : ""}
             </Button>
           </DialogFooter>
         </DialogContent>

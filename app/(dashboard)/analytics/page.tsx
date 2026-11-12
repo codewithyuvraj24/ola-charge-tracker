@@ -3,11 +3,19 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useScooter } from "@/lib/scooter-context";
 import { getChargingSessions } from "@/lib/firestore";
-import { computeDashboardStats, computeMonthlyData } from "@/lib/calculations";
+import {
+  computeDashboardStats,
+  computeMonthlyData,
+  computeLocationData,
+  computeEvVsPetrolSavings,
+} from "@/lib/calculations";
 import { formatCurrency, formatNumber, formatDate } from "@/lib/utils";
 import type { ChargingSession } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
@@ -17,7 +25,6 @@ import {
 } from "@/components/ui/chart";
 import {
   TrendingUp,
-  IndianRupee,
   Zap,
   Gauge,
   ArrowUpRight,
@@ -25,12 +32,15 @@ import {
   Sparkles,
   BarChart3,
   Calendar,
+  Flame,
+  MapPin,
+  BatteryCharging,
 } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 const monthlyChartConfig = {
   expenditure: {
-    label: "Expenditure (₹)",
+    label: "Expenditure",
     color: "hsl(var(--chart-1))",
   },
   electricity: {
@@ -40,7 +50,12 @@ const monthlyChartConfig = {
 } satisfies ChartConfig;
 
 export default function AnalyticsPage() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
+  const { scooter, scooters, activeFilterScooterId, viewAllVehicles } = useScooter();
+  const currency = userProfile?.currency || "₹";
+  const petrolPrice = userProfile?.petrolPrice ?? 105;
+  const petrolMileage = userProfile?.petrolMileage ?? 45;
+
   const [sessions, setSessions] = useState<ChargingSession[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,7 +64,12 @@ export default function AnalyticsPage() {
       if (!user) return;
       try {
         setLoading(true);
-        const data = await getChargingSessions(user.uid);
+        const data = await getChargingSessions(
+          user.uid,
+          undefined,
+          undefined,
+          activeFilterScooterId
+        );
         setSessions(data);
       } catch (e) {
         console.error(e);
@@ -58,10 +78,21 @@ export default function AnalyticsPage() {
       }
     }
     load();
-  }, [user]);
+  }, [user, activeFilterScooterId]);
 
   const stats = useMemo(() => computeDashboardStats(sessions), [sessions]);
   const monthlyData = useMemo(() => computeMonthlyData(sessions), [sessions]);
+  const locationData = useMemo(() => computeLocationData(sessions), [sessions]);
+  const savings = useMemo(
+    () =>
+      computeEvVsPetrolSavings(
+        stats.totalDistance,
+        stats.totalExpenditure,
+        petrolPrice,
+        petrolMileage
+      ),
+    [stats.totalDistance, stats.totalExpenditure, petrolPrice, petrolMileage]
+  );
 
   const extrema = useMemo(() => {
     if (sessions.length === 0) return { maxSession: null, minSession: null };
@@ -112,16 +143,47 @@ export default function AnalyticsPage() {
           Charging Analytics
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Long-term energy consumption trends, cost metrics, and efficiency insights.
+          {viewAllVehicles && scooters.length > 1
+            ? `Aggregated metrics across all ${scooters.length} vehicles`
+            : `${scooter?.name || "Vehicle"} • Long-term energy, cycle & savings insights`}
         </p>
       </div>
 
-      {/* Smart Insights Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* EV vs Petrol Savings + Smart Insights Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-primary/30 bg-primary/5">
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center gap-2 text-xs font-medium text-primary">
-              <Sparkles className="h-4 w-4" />
+              <Flame className="h-4 w-4" />
+              EV vs Petrol Savings
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 pt-1 space-y-1">
+            {savings.hasDistance ? (
+              <>
+                <p className="text-sm text-foreground">
+                  Saved{" "}
+                  <span className="font-bold font-mono-num text-primary">
+                    {formatCurrency(savings.netSavings, currency)}
+                  </span>{" "}
+                  vs petrol.
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Petrol equiv: {formatCurrency(savings.petrolCost, currency)} ({currency}{petrolPrice}/L @ {petrolMileage} km/L).
+                </p>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Log start &amp; end odometer readings to compute real savings vs a petrol scooter.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="p-4 pb-2">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <Sparkles className="h-4 w-4 text-primary" />
               Monthly Benchmark
             </div>
           </CardHeader>
@@ -129,19 +191,19 @@ export default function AnalyticsPage() {
             {currentMonthInsight ? (
               <>
                 <p className="text-sm text-foreground">
-                  Your average charging cost this month is{" "}
+                  Avg cost this month is{" "}
                   <span className="font-bold font-mono-num text-primary">
-                    {formatCurrency(currentMonthInsight.avgCost)}
+                    {formatCurrency(currentMonthInsight.avgCost, currency)}
                   </span>
                   .
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  Across {currentMonthInsight.count} charging sessions recorded this month.
+                  Across {currentMonthInsight.count} session{currentMonthInsight.count > 1 ? "s" : ""} this month.
                 </p>
               </>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Log a charging session this month to unlock monthly benchmark insights.
+                Log a session this month to unlock monthly benchmark insights.
               </p>
             )}
           </CardContent>
@@ -158,19 +220,19 @@ export default function AnalyticsPage() {
             {thisYearSpent !== null ? (
               <>
                 <p className="text-sm text-foreground">
-                  You have spent{" "}
+                  Spent{" "}
                   <span className="font-bold font-mono-num text-chart-2">
-                    {formatCurrency(thisYearSpent)}
+                    {formatCurrency(thisYearSpent, currency)}
                   </span>{" "}
-                  on electricity this year.
+                  in {new Date().getFullYear()}.
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  Total grid electricity cost for {new Date().getFullYear()}.
+                  Cumulative grid power bill year-to-date.
                 </p>
               </>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Log charging sessions to track your cumulative annual electricity budget.
+                Log charging sessions to track your annual electricity budget.
               </p>
             )}
           </CardContent>
@@ -179,29 +241,19 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-              <Gauge className="h-4 w-4 text-primary" />
-              Riding Efficiency
+              <BatteryCharging className="h-4 w-4 text-chart-3" />
+              Battery Cycles
             </div>
           </CardHeader>
           <CardContent className="p-4 pt-1 space-y-1">
-            {stats.costPerKm !== null ? (
-              <>
-                <p className="text-sm text-foreground">
-                  Your average charging cost per kilometre is{" "}
-                  <span className="font-bold font-mono-num text-primary">
-                    {formatCurrency(stats.costPerKm)}/km
-                  </span>
-                  .
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  Based on {formatNumber(stats.totalDistance, 0)} km recorded via odometer.
-                </p>
-              </>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Enter start and end odometers when logging sessions to calculate cost per kilometre.
-              </p>
-            )}
+            <p className="text-sm text-foreground">
+              <span className="font-bold font-mono-num text-foreground">
+                {formatNumber(stats.equivalentCycles, 2)} eq. cycles
+              </span>
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Full 0→100% equivalents across {stats.totalSessions} plug-ins.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -215,7 +267,7 @@ export default function AnalyticsPage() {
               <ArrowUpRight className="h-4 w-4 text-destructive" />
             </div>
             <CardTitle className="text-xl font-bold font-mono-num mt-1">
-              {extrema.maxSession ? formatCurrency(extrema.maxSession.totalCost) : "—"}
+              {extrema.maxSession ? formatCurrency(extrema.maxSession.totalCost, currency) : "—"}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-1 text-[11px] text-muted-foreground">
@@ -232,7 +284,7 @@ export default function AnalyticsPage() {
               <ArrowDownRight className="h-4 w-4 text-primary" />
             </div>
             <CardTitle className="text-xl font-bold font-mono-num mt-1">
-              {extrema.minSession ? formatCurrency(extrema.minSession.totalCost) : "—"}
+              {extrema.minSession ? formatCurrency(extrema.minSession.totalCost, currency) : "—"}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-1 text-[11px] text-muted-foreground">
@@ -261,25 +313,80 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader className="p-4 pb-1">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-medium">Avg Session Cost</span>
-              <IndianRupee className="h-4 w-4 text-primary" />
+              <span className="text-xs font-medium">Cost / km</span>
+              <Gauge className="h-4 w-4 text-primary" />
             </div>
             <CardTitle className="text-xl font-bold font-mono-num mt-1">
-              {formatCurrency(stats.averageCost)}
+              {stats.costPerKm !== null ? `${formatCurrency(stats.costPerKm, currency)}/km` : "—"}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-1 text-[11px] text-muted-foreground">
-            Mean expenditure per plug-in
+            {stats.totalDistance > 0
+              ? `${formatNumber(stats.totalDistance, 0)} km tracked`
+              : "Add odometer to track"}
           </CardContent>
         </Card>
       </div>
+
+      {/* Spend by Location Breakdown */}
+      {!loading && locationData.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  Cost &amp; Energy by Location
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Charging distribution across home, office, and fast chargers
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="font-mono-num text-xs">
+                {locationData.length} location{locationData.length > 1 ? "s" : ""}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {locationData.map((loc) => {
+              const pct =
+                stats.totalExpenditure > 0
+                  ? Math.round((loc.expenditure / stats.totalExpenditure) * 100)
+                  : 0;
+              return (
+                <div key={loc.location} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground">{loc.location}</span>
+                      <Badge variant="secondary" className="text-[10px] font-mono-num">
+                        {loc.sessions} {loc.sessions === 1 ? "log" : "logs"}
+                      </Badge>
+                    </div>
+                    <div className="font-mono-num text-right">
+                      <span className="font-bold text-foreground">
+                        {formatCurrency(loc.expenditure, currency)}
+                      </span>
+                      <span className="text-muted-foreground ml-2">
+                        ({formatNumber(loc.electricity, 1)} kWh • {pct}%)
+                      </span>
+                    </div>
+                  </div>
+                  <Progress value={pct} className="h-1.5" />
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       {/* shadcn/ui ChartContainers */}
       {!loading && monthlyData.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold">Monthly Expenditure (₹)</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Monthly Expenditure ({currency})
+              </CardTitle>
               <CardDescription className="text-xs">
                 Total money spent on scooter electricity by month
               </CardDescription>

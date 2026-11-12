@@ -1,13 +1,18 @@
-import type { CalculatedValues, ChargingSession, DashboardStats, MonthlyData, SessionChartData } from "./types";
+import type {
+  CalculatedValues,
+  ChargingSession,
+  DashboardStats,
+  LocationBreakdown,
+  MonthlyData,
+  SessionChartData,
+} from "./types";
 
 /**
  * Core calculation engine for charging sessions.
- * All calculations follow the specification:
  *   batteryEnergy = ((endPct - startPct) / 100) × batteryCapacity
  *   gridEnergy    = batteryEnergy / (1 - chargingLoss / 100)
  *   chargingCost  = gridEnergy × electricityRate
  */
-
 export function calculateSession(
   startPercentage: number,
   endPercentage: number,
@@ -51,6 +56,7 @@ export function computeDashboardStats(sessions: ChargingSession[]): DashboardSta
       totalExpenditure: 0,
       averageCost: 0,
       averageAdded: 0,
+      equivalentCycles: 0,
       totalDistance: 0,
       costPerKm: null,
     };
@@ -60,7 +66,9 @@ export function computeDashboardStats(sessions: ChargingSession[]): DashboardSta
   const totalElectricity = sessions.reduce((sum, s) => sum + s.gridUnits, 0);
   const totalExpenditure = sessions.reduce((sum, s) => sum + s.totalCost, 0);
   const averageCost = totalExpenditure / totalSessions;
-  const averageAdded = sessions.reduce((sum, s) => sum + s.addedPercentage, 0) / totalSessions;
+  const totalAddedPct = sessions.reduce((sum, s) => sum + s.addedPercentage, 0);
+  const averageAdded = totalAddedPct / totalSessions;
+  const equivalentCycles = totalAddedPct / 100;
   const totalDistance = sessions.reduce((sum, s) => sum + (s.distanceTravelled ?? 0), 0);
   const costPerKm = totalDistance > 0 ? totalExpenditure / totalDistance : null;
 
@@ -70,6 +78,7 @@ export function computeDashboardStats(sessions: ChargingSession[]): DashboardSta
     totalExpenditure: round(totalExpenditure, 2),
     averageCost: round(averageCost, 2),
     averageAdded: round(averageAdded, 1),
+    equivalentCycles: round(equivalentCycles, 2),
     totalDistance: round(totalDistance, 1),
     costPerKm: costPerKm !== null ? round(costPerKm, 2) : null,
   };
@@ -98,7 +107,7 @@ export function computeMonthlyData(sessions: ChargingSession[]): MonthlyData[] {
 }
 
 export function computeSessionChartData(sessions: ChargingSession[]): SessionChartData[] {
-  return sessions
+  return [...sessions]
     .sort((a, b) => a.date.toMillis() - b.date.toMillis())
     .map((s) => ({
       date: s.date.toDate().toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
@@ -108,8 +117,38 @@ export function computeSessionChartData(sessions: ChargingSession[]): SessionCha
     }));
 }
 
+export function computeLocationData(sessions: ChargingSession[]): LocationBreakdown[] {
+  const map = new Map<string, LocationBreakdown>();
+
+  for (const s of sessions) {
+    const loc = (s.location || "Home").trim() || "Home";
+    if (!map.has(loc)) {
+      map.set(loc, { location: loc, expenditure: 0, electricity: 0, sessions: 0 });
+    }
+    const entry = map.get(loc)!;
+    entry.expenditure = round(entry.expenditure + s.totalCost, 2);
+    entry.electricity = round(entry.electricity + s.gridUnits, 2);
+    entry.sessions += 1;
+  }
+
+  return Array.from(map.values()).sort((a, b) => b.expenditure - a.expenditure);
+}
+
+export function computeEvVsPetrolSavings(
+  totalDistanceKm: number,
+  totalEvCost: number,
+  petrolPrice: number = 105,
+  petrolMileage: number = 45
+) {
+  if (totalDistanceKm <= 0 || petrolMileage <= 0 || petrolPrice <= 0) {
+    return { petrolCost: 0, netSavings: 0, hasDistance: false };
+  }
+  const petrolCost = round((totalDistanceKm / petrolMileage) * petrolPrice, 2);
+  const netSavings = round(petrolCost - totalEvCost, 2);
+  return { petrolCost, netSavings, hasDistance: true };
+}
+
 function round(value: number, decimals: number): number {
   const factor = Math.pow(10, decimals);
   return Math.round(value * factor) / factor;
 }
-

@@ -61,8 +61,16 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, userProfile, loading, logout } = useAuth();
-  const { scooter, loadingScooter } = useScooter();
+  const {
+    scooter,
+    scooters,
+    loadingScooter,
+    setSelectedScooterId,
+    viewAllVehicles,
+    setViewAllVehicles,
+  } = useScooter();
   const { theme, setTheme } = useTheme();
+  const currency = userProfile?.currency || "₹";
 
   useEffect(() => {
     if (!loading) {
@@ -120,23 +128,76 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          {/* Active Vehicle Card */}
+          {/* Active Vehicle Card / Switcher */}
           {scooter && (
-            <div className="mb-4 rounded-lg border border-border bg-background/70 p-3 space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground truncate">
-                  <Bike className="h-3.5 w-3.5 text-primary shrink-0" />
-                  {scooter.name}
-                </span>
-                <Badge variant="outline" className="font-mono-num text-[10px] shrink-0">
-                  {scooter.batteryCapacity} kWh
-                </Badge>
-              </div>
-              <div className="text-[11px] text-muted-foreground flex items-center justify-between">
-                <span className="truncate">{scooter.model}</span>
-                <span className="font-mono-num">₹{scooter.electricityRate}/u</span>
-              </div>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="mb-4 w-full text-left rounded-lg border border-border bg-background/70 p-3 space-y-1.5 hover:border-primary/40 transition-colors ios-touch"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground truncate">
+                      <Bike className="h-3.5 w-3.5 text-primary shrink-0" />
+                      {viewAllVehicles && scooters.length > 1 ? "All Vehicles" : scooter.name}
+                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Badge variant="outline" className="font-mono-num text-[10px]">
+                        {scooter.batteryCapacity} kWh
+                      </Badge>
+                      <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground flex items-center justify-between">
+                    <span className="truncate">{scooter.model}</span>
+                    <span className="font-mono-num">
+                      {currency}{scooter.electricityRate}/u
+                    </span>
+                  </div>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                  Garage ({scooters.length} {scooters.length === 1 ? "vehicle" : "vehicles"})
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {scooters.map((item) => (
+                  <DropdownMenuItem
+                    key={item.id}
+                    onClick={() => setSelectedScooterId(item.id)}
+                    className="cursor-pointer justify-between"
+                  >
+                    <span className="truncate font-medium text-xs">{item.name}</span>
+                    {!viewAllVehicles && scooter.id === item.id && (
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        Active
+                      </Badge>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+                {scooters.length > 1 && (
+                  <DropdownMenuItem
+                    onClick={() => setViewAllVehicles(!viewAllVehicles)}
+                    className="cursor-pointer justify-between text-xs"
+                  >
+                    <span>View All Vehicles</span>
+                    {viewAllVehicles && (
+                      <Badge variant="default" className="text-[10px] px-1.5 py-0">
+                        On
+                      </Badge>
+                    )}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => router.push("/settings")}
+                  className="cursor-pointer text-xs text-primary"
+                >
+                  <Plus className="mr-2 h-3.5 w-3.5" />
+                  <span>Manage Garage</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
 
           {/* Quick Add CTA */}
@@ -275,19 +336,44 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
                 <div className="mt-6 space-y-4">
                   {scooter && (
-                    <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1">
+                    <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
                       <div className="flex items-center justify-between text-xs font-semibold">
                         <span className="flex items-center gap-1.5">
                           <Bike className="h-3.5 w-3.5 text-primary" />
-                          {scooter.name}
+                          {viewAllVehicles && scooters.length > 1 ? "All Vehicles" : scooter.name}
                         </span>
                         <Badge variant="secondary" className="font-mono-num text-[10px]">
                           {scooter.batteryCapacity} kWh
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {scooter.model} • ₹{scooter.electricityRate}/kWh • {scooter.chargingLoss}% loss
+                        {scooter.model} • {currency}{scooter.electricityRate}/kWh • {scooter.chargingLoss}% loss
                       </p>
+                      {scooters.length > 1 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {scooters.map((item) => (
+                            <Button
+                              key={item.id}
+                              type="button"
+                              size="sm"
+                              variant={!viewAllVehicles && scooter.id === item.id ? "default" : "outline"}
+                              onClick={() => setSelectedScooterId(item.id)}
+                              className="h-7 px-2 text-[11px]"
+                            >
+                              {item.name}
+                            </Button>
+                          ))}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={viewAllVehicles ? "default" : "outline"}
+                            onClick={() => setViewAllVehicles(!viewAllVehicles)}
+                            className="h-7 px-2 text-[11px]"
+                          >
+                            All
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
 

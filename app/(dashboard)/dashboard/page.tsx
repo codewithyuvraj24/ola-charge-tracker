@@ -16,6 +16,8 @@ import { DATE_FILTER_OPTIONS } from "@/lib/types";
 import { VisualBatteryGauge } from "@/components/ui/battery-gauge";
 import { ChargePulseButton } from "@/components/ui/uiverse";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import {
   Card,
   CardContent,
@@ -58,6 +60,7 @@ import {
   BatteryCharging,
   TrendingDown,
   Trash2,
+  Wallet,
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
@@ -74,11 +77,23 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export default function DashboardPage() {
-  const { user } = useAuth();
-  const { scooter } = useScooter();
+  const { user, userProfile } = useAuth();
+  const { scooter, scooters, activeFilterScooterId, viewAllVehicles } = useScooter();
+  const currency = userProfile?.currency || "₹";
+  const monthlyBudget = userProfile?.monthlyBudget;
+
   const [sessions, setSessions] = useState<ChargingSession[]>([]);
+  const [monthSpend, setMonthSpend] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState<DateFilter>("30d");
+  const [customStart, setCustomStart] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 14);
+    return d.toISOString().split("T")[0];
+  });
+  const [customEnd, setCustomEnd] = useState<string>(
+    () => new Date().toISOString().split("T")[0]
+  );
 
   const [gaugeStart, setGaugeStart] = useState<number>(20);
   const [gaugeEnd, setGaugeEnd] = useState<number>(100);
@@ -90,13 +105,36 @@ export default function DashboardPage() {
     if (!user) return;
     try {
       setLoading(true);
-      const { start, end } = getDateRange(dateFilter);
-      const list = await getChargingSessions(
-        user.uid,
-        dateFilter === "all" ? undefined : start,
-        dateFilter === "all" ? undefined : end
-      );
+      let start: Date | undefined;
+      let end: Date | undefined;
+
+      if (dateFilter === "custom") {
+        start = new Date(customStart);
+        start.setHours(0, 0, 0, 0);
+        end = new Date(customEnd);
+        end.setHours(23, 59, 59, 999);
+      } else if (dateFilter !== "all") {
+        const range = getDateRange(dateFilter);
+        start = range.start;
+        end = range.end;
+      }
+
+      const [list, thisMonthList] = await Promise.all([
+        getChargingSessions(user.uid, start, end, activeFilterScooterId),
+        monthlyBudget
+          ? (() => {
+              const now = new Date();
+              const mStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+              const mEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+              return getChargingSessions(user.uid, mStart, mEnd, activeFilterScooterId);
+            })()
+          : Promise.resolve([]),
+      ]);
+
       setSessions(list);
+      if (monthlyBudget) {
+        setMonthSpend(thisMonthList.reduce((acc, s) => acc + s.totalCost, 0));
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -106,7 +144,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchSessions();
-  }, [user, dateFilter]);
+  }, [user, dateFilter, customStart, customEnd, activeFilterScooterId, monthlyBudget]);
 
   const stats = useMemo(() => computeDashboardStats(sessions), [sessions]);
   const sessionChartData = useMemo(() => computeSessionChartData(sessions), [sessions]);
@@ -138,7 +176,7 @@ export default function DashboardPage() {
         },
         scooter
       );
-      toast.success(`Session saved (${formatCurrency(quickCalc.totalCost)})`);
+      toast.success(`Session saved (${formatCurrency(quickCalc.totalCost, currency)})`);
       await fetchSessions();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to record session";
@@ -173,7 +211,9 @@ export default function DashboardPage() {
             Charging Dashboard
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {scooter?.name} • {scooter?.model} ({scooter?.batteryCapacity} kWh)
+            {viewAllVehicles && scooters.length > 1
+              ? `All ${scooters.length} vehicles in garage`
+              : `${scooter?.name} • ${scooter?.model} (${scooter?.batteryCapacity} kWh)`}
           </p>
         </div>
 
@@ -193,6 +233,7 @@ export default function DashboardPage() {
           capacityKwh={scooter?.batteryCapacity || 4}
           lossPct={scooter?.chargingLoss ?? 10}
           ratePerKwh={scooter?.electricityRate || 12}
+          currency={currency}
           onRangeChange={(s, e) => {
             setGaugeStart(s);
             setGaugeEnd(e);
@@ -238,29 +279,96 @@ export default function DashboardPage() {
             <span>
               {loggingQuick
                 ? "Saving..."
-                : `Quick Log (${quickCalc ? formatCurrency(quickCalc.totalCost) : "₹0.00"})`}
+                : `Quick Log (${quickCalc ? formatCurrency(quickCalc.totalCost, currency) : `${currency}0.00`})`}
             </span>
           </ChargePulseButton>
         </div>
       </div>
 
       {/* Timeframe Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card/50 p-2">
-        <span className="text-xs font-medium text-muted-foreground px-2">Timeframe</span>
-        <div className="flex flex-wrap gap-1">
-          {DATE_FILTER_OPTIONS.map((opt) => (
-            <Button
-              key={opt.value}
-              size="sm"
-              variant={dateFilter === opt.value ? "default" : "ghost"}
-              onClick={() => setDateFilter(opt.value)}
-              className="h-7 px-2.5 text-xs"
-            >
-              {opt.label}
-            </Button>
-          ))}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card/50 p-2">
+          <span className="text-xs font-medium text-muted-foreground px-2">Timeframe</span>
+          <div className="flex flex-wrap gap-1">
+            {DATE_FILTER_OPTIONS.map((opt) => (
+              <Button
+                key={opt.value}
+                size="sm"
+                variant={dateFilter === opt.value ? "default" : "ghost"}
+                onClick={() => setDateFilter(opt.value)}
+                className="h-7 px-2.5 text-xs"
+              >
+                {opt.label}
+              </Button>
+            ))}
+          </div>
         </div>
+
+        {dateFilter === "custom" && (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card/50 p-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">From</span>
+              <Input
+                type="date"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="h-8 w-auto text-xs font-mono-num"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">To</span>
+              <Input
+                type="date"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="h-8 w-auto text-xs font-mono-num"
+              />
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Monthly Charging Budget Tracker */}
+      {monthlyBudget && monthlyBudget > 0 ? (
+        <Card>
+          <CardContent className="p-4 space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs font-medium text-foreground">
+                <Wallet className="h-4 w-4 text-primary" />
+                <span>Monthly Charging Budget</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs font-mono-num">
+                <span className="font-semibold text-foreground">
+                  {formatCurrency(monthSpend, currency)}
+                </span>
+                <span className="text-muted-foreground">
+                  / {formatCurrency(monthlyBudget, currency)}
+                </span>
+                <Badge
+                  variant={monthSpend > monthlyBudget ? "destructive" : "secondary"}
+                  className="text-[10px]"
+                >
+                  {Math.min(100, Math.round((monthSpend / monthlyBudget) * 100))}%
+                </Badge>
+              </div>
+            </div>
+            <Progress
+              value={Math.min(100, (monthSpend / monthlyBudget) * 100)}
+              className="h-2"
+            />
+            <div className="flex justify-between text-[11px] text-muted-foreground">
+              <span>
+                {monthSpend > monthlyBudget
+                  ? `Over budget by ${formatCurrency(monthSpend - monthlyBudget, currency)}`
+                  : `${formatCurrency(monthlyBudget - monthSpend, currency)} remaining this month`}
+              </span>
+              <Link href="/settings" className="text-primary hover:underline">
+                Adjust limit
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* KPI Summary Cards */}
       {loading ? (
@@ -288,7 +396,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0">
               <div className="text-2xl font-bold font-mono-num">
-                {formatCurrency(stats.totalExpenditure)}
+                {formatCurrency(stats.totalExpenditure, currency)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Across {stats.totalSessions} charging sessions
@@ -323,7 +431,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0">
               <div className="text-2xl font-bold font-mono-num">
-                {stats.costPerKm !== null ? `${formatCurrency(stats.costPerKm)}/km` : "—"}
+                {stats.costPerKm !== null ? `${formatCurrency(stats.costPerKm, currency)}/km` : "—"}
               </div>
               <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                 {stats.totalDistance > 0 ? (
@@ -347,10 +455,10 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0">
               <div className="text-2xl font-bold font-mono-num">
-                {formatCurrency(stats.averageCost)}
+                {formatCurrency(stats.averageCost, currency)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                +{stats.averageAdded}% average battery added
+                +{stats.averageAdded}% avg • {stats.equivalentCycles} cycles
               </p>
             </CardContent>
           </Card>
@@ -364,7 +472,7 @@ export default function DashboardPage() {
             <div>
               <CardTitle className="text-base font-semibold">Charging Expenditure</CardTitle>
               <CardDescription className="text-xs">
-                Electricity cost (₹) per recorded plug-in
+                Electricity cost ({currency}) per recorded plug-in
               </CardDescription>
             </div>
             <Badge variant="outline" className="font-mono-num text-xs">
@@ -477,7 +585,7 @@ export default function DashboardPage() {
                       {formatNumber(s.gridUnits, 2)} kWh
                     </TableCell>
                     <TableCell className="text-right text-xs font-mono-num font-semibold">
-                      {formatCurrency(s.totalCost)}
+                      {formatCurrency(s.totalCost, currency)}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
@@ -510,7 +618,7 @@ export default function DashboardPage() {
             <AlertDialogTitle>Delete Charging Log?</AlertDialogTitle>
             <AlertDialogDescription>
               {deletingSession
-                ? `Remove the ${formatDate(deletingSession.date.toDate())} session (+${deletingSession.addedPercentage}%, ${formatCurrency(deletingSession.totalCost)}) permanently? Your dashboard metrics will update automatically.`
+                ? `Remove the ${formatDate(deletingSession.date.toDate())} session (+${deletingSession.addedPercentage}%, ${formatCurrency(deletingSession.totalCost, currency)}) permanently? Your dashboard metrics will update automatically.`
                 : "This action cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>

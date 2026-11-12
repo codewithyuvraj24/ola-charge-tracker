@@ -14,6 +14,7 @@ interface BatteryGaugeProps {
   capacityKwh: number;
   lossPct: number;
   ratePerKwh: number;
+  currency?: string;
   onRangeChange?: (start: number, end: number) => void;
   interactive?: boolean;
 }
@@ -24,6 +25,7 @@ export function VisualBatteryGauge({
   capacityKwh,
   lossPct,
   ratePerKwh,
+  currency = "₹",
   onRangeChange,
   interactive = false,
 }: BatteryGaugeProps) {
@@ -59,7 +61,7 @@ export function VisualBatteryGauge({
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono-num">
             <span>Loss {lossPct}%</span>
             <span>•</span>
-            <span>₹{ratePerKwh}/kWh</span>
+            <span>{currency}{ratePerKwh}/kWh</span>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button type="button" className="text-muted-foreground hover:text-foreground">
@@ -196,7 +198,7 @@ export function VisualBatteryGauge({
                 Est. Cost
               </div>
               <div className="mt-1 text-sm sm:text-base font-bold font-mono-num text-primary">
-                ₹{cost.toFixed(2)}
+                {currency}{cost.toFixed(2)}
               </div>
             </div>
           </div>

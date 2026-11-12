@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "./auth-context";
-import { getDefaultScooter, getScooters } from "./firestore";
+import { getScooters } from "./firestore";
 import type { Scooter } from "./types";
 
 interface ScooterContextType {
@@ -11,6 +11,9 @@ interface ScooterContextType {
   loadingScooter: boolean;
   refreshScooter: () => Promise<void>;
   setSelectedScooterId: (id: string) => void;
+  activeFilterScooterId: string | undefined;
+  viewAllVehicles: boolean;
+  setViewAllVehicles: (v: boolean) => void;
 }
 
 const ScooterContext = createContext<ScooterContextType | undefined>(undefined);
@@ -20,6 +23,7 @@ export function ScooterProvider({ children }: { children: ReactNode }) {
   const [scooter, setScooter] = useState<Scooter | null>(null);
   const [scooters, setScooters] = useState<Scooter[]>([]);
   const [loadingScooter, setLoadingScooter] = useState(true);
+  const [viewAllVehicles, setViewAllVehicles] = useState(false);
 
   const fetchScooters = async () => {
     if (!user) {
@@ -33,7 +37,10 @@ export function ScooterProvider({ children }: { children: ReactNode }) {
       setLoadingScooter(true);
       const list = await getScooters(user.uid);
       setScooters(list);
-      const def = list.find((s) => s.isDefault) || list[0] || null;
+      const savedId =
+        typeof window !== "undefined" ? localStorage.getItem("active_scooter_id") : null;
+      const preferred = savedId ? list.find((s) => s.id === savedId) : undefined;
+      const def = preferred || list.find((s) => s.isDefault) || list[0] || null;
       setScooter(def);
     } catch (err) {
       console.error("Failed to load scooters:", err);
@@ -48,8 +55,18 @@ export function ScooterProvider({ children }: { children: ReactNode }) {
 
   const setSelectedScooterId = (id: string) => {
     const found = scooters.find((s) => s.id === id);
-    if (found) setScooter(found);
+    if (found) {
+      setScooter(found);
+      setViewAllVehicles(false);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("active_scooter_id", found.id);
+      }
+    }
   };
+
+  // Only scope queries by scooterId when user owns multiple scooters and hasn't toggled "All Vehicles"
+  const activeFilterScooterId =
+    scooters.length > 1 && !viewAllVehicles ? scooter?.id : undefined;
 
   return (
     <ScooterContext.Provider
@@ -59,6 +76,9 @@ export function ScooterProvider({ children }: { children: ReactNode }) {
         loadingScooter,
         refreshScooter: fetchScooters,
         setSelectedScooterId,
+        activeFilterScooterId,
+        viewAllVehicles,
+        setViewAllVehicles,
       }}
     >
       {children}
@@ -69,8 +89,7 @@ export function ScooterProvider({ children }: { children: ReactNode }) {
 export function useScooter() {
   const context = useContext(ScooterContext);
   if (!context) {
-    throw new Error("useScooter must be used within a ScooterProvider");
+    throw new Error("useScooter must be used within ScooterProvider");
   }
   return context;
 }
-
