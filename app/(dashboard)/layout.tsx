@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { BatteryChargeLoader, LiveStatusPill } from "@/components/ui/uiverse";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,7 +39,6 @@ import {
   Bike,
   Palette,
   ChevronsUpDown,
-  ShieldCheck,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -76,13 +76,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   if (loading || loadingScooter) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card shadow-sm">
-          <Zap className="h-5 w-5 text-primary animate-pulse" />
-        </div>
-        <span className="text-xs font-medium text-muted-foreground">
-          Loading workspace...
-        </span>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <BatteryChargeLoader label="Syncing vehicle telemetry..." />
       </div>
     );
   }
@@ -176,9 +171,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           </nav>
 
           {/* Privacy Notice */}
-          <div className="my-3 flex items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
-            <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />
-            <span>Private Firestore Sync</span>
+          <div className="my-3 flex items-center justify-center">
+            <LiveStatusPill label="Private Firestore Sync" className="w-full justify-center py-1.5" />
           </div>
 
           <Separator className="mb-3" />

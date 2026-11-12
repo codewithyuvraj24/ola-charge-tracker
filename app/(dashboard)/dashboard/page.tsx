@@ -14,6 +14,7 @@ import { formatCurrency, formatNumber, formatDate, getDateRange } from "@/lib/ut
 import type { ChargingSession, DateFilter } from "@/lib/types";
 import { DATE_FILTER_OPTIONS } from "@/lib/types";
 import { VisualBatteryGauge } from "@/components/ui/battery-gauge";
+import { ChargePulseButton } from "@/components/ui/uiverse";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -46,7 +47,6 @@ import {
   Gauge,
   BatteryCharging,
   TrendingDown,
-  Loader2,
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
@@ -198,23 +198,20 @@ export default function DashboardPage() {
             })}
           </div>
 
-          <Button
+          <ChargePulseButton
             size="sm"
+            loading={loggingQuick}
             onClick={handleLogFromGauge}
-            disabled={loggingQuick || !quickCalc}
-            className="gap-1.5 font-medium ios-touch"
+            disabled={!quickCalc}
+            className="font-medium"
           >
-            {loggingQuick ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Zap className="h-3.5 w-3.5 fill-current" />
-            )}
+            {!loggingQuick && <Zap className="h-3.5 w-3.5 fill-current" />}
             <span>
               {loggingQuick
                 ? "Saving..."
                 : `Quick Log (${quickCalc ? formatCurrency(quickCalc.totalCost) : "₹0.00"})`}
             </span>
-          </Button>
+          </ChargePulseButton>
         </div>
       </div>
 

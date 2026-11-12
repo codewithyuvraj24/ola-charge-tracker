@@ -41,6 +41,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { BatteryChargeLoader } from "@/components/ui/uiverse";
 import {
   Search,
   Download,
@@ -388,9 +389,8 @@ export default function HistoryPage() {
       <Card className="border-border/60 shadow-md bg-card/70 overflow-hidden">
         <CardContent className="p-0">
           {loading ? (
-            <div className="py-16 flex flex-col items-center justify-center gap-2">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-xs text-muted-foreground">Loading records...</p>
+            <div className="py-16">
+              <BatteryChargeLoader label="Loading charging history..." />
             </div>
           ) : paginatedSessions.length === 0 ? (
             <div className="py-16 text-center space-y-2">

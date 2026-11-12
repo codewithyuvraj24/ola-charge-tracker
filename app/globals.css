@@ -198,3 +198,77 @@
   background: hsl(var(--border));
   border-radius: 9999px;
 }
+
+/* Uiverse Micro-Interaction Primitives (Theme-Token Aware) */
+@keyframes uiverse-shine {
+  0% {
+    transform: translateX(-140%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(240%) skewX(-20deg);
+  }
+}
+
+.uiverse-shine-btn {
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.18), 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.14s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.uiverse-shine-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.22),
+    transparent
+  );
+  transform: translateX(-140%) skewX(-20deg);
+  pointer-events: none;
+}
+.uiverse-shine-btn:hover::after {
+  animation: uiverse-shine 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.uiverse-shine-btn:active {
+  transform: translateY(1px) scale(0.985);
+}
+
+@keyframes uiverse-cell-charge {
+  0%, 15% {
+    opacity: 0.2;
+    transform: scaleY(0.82);
+  }
+  45%, 85% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  100% {
+    opacity: 0.2;
+    transform: scaleY(0.82);
+  }
+}
+
+.uiverse-cell-1 {
+  animation: uiverse-cell-charge 1.4s ease-in-out infinite 0s;
+}
+.uiverse-cell-2 {
+  animation: uiverse-cell-charge 1.4s ease-in-out infinite 0.18s;
+}
+.uiverse-cell-3 {
+  animation: uiverse-cell-charge 1.4s ease-in-out infinite 0.36s;
+}
+.uiverse-cell-4 {
+  animation: uiverse-cell-charge 1.4s ease-in-out infinite 0.54s;
+}
+
+.uiverse-spotlight-card {
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.25s ease, transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+.uiverse-spotlight-card:hover {
+  border-color: hsl(var(--primary) / 0.45);
+}

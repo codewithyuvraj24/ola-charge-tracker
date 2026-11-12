@@ -7,6 +7,7 @@ import { useScooter } from "@/lib/scooter-context";
 import { addChargingSession } from "@/lib/firestore";
 import { calculateSession } from "@/lib/calculations";
 import { VisualBatteryGauge } from "@/components/ui/battery-gauge";
+import { ChargePulseButton } from "@/components/ui/uiverse";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +19,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Zap, BatteryCharging, Loader2 } from "lucide-react";
+import { Zap, BatteryCharging } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AddSessionPage() {
@@ -272,24 +273,22 @@ export default function AddSessionPage() {
           </CardContent>
         </Card>
 
-        <Button
+        <ChargePulseButton
           type="submit"
           size="lg"
-          disabled={submitting || !calc}
-          className="w-full font-semibold gap-2 ios-touch"
+          loading={submitting}
+          disabled={!calc}
+          className="w-full"
         >
           {submitting ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Saving Session...
-            </>
+            <span>Saving Session...</span>
           ) : (
             <>
               <Zap className="h-4 w-4 fill-current" />
-              Save Charging Record
+              <span>Save Charging Record</span>
             </>
           )}
-        </Button>
+        </ChargePulseButton>
       </form>
     </div>
   );
