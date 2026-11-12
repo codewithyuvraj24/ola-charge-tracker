@@ -16,23 +16,51 @@ import { DATE_FILTER_OPTIONS } from "@/lib/types";
 import { VisualBatteryGauge } from "@/components/ui/battery-gauge";
 import { Button } from "@/components/ui/button";
 import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import {
   Plus,
   ArrowUpRight,
-  Filter,
-  History,
-  Terminal,
+  IndianRupee,
   Zap,
+  Gauge,
+  BatteryCharging,
+  TrendingDown,
+  Loader2,
 } from "lucide-react";
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-} from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
+
+const chartConfig = {
+  cost: {
+    label: "Charging Cost (₹)",
+    color: "hsl(var(--chart-1))",
+  },
+  gridUnits: {
+    label: "Grid Units (kWh)",
+    color: "hsl(var(--chart-2))",
+  },
+} satisfies ChartConfig;
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -41,7 +69,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState<DateFilter>("30d");
 
-  // Interactive Battery SOC range
   const [gaugeStart, setGaugeStart] = useState<number>(20);
   const [gaugeEnd, setGaugeEnd] = useState<number>(100);
   const [loggingQuick, setLoggingQuick] = useState(false);
@@ -94,7 +121,7 @@ export default function DashboardPage() {
           endPercentage: gaugeEnd,
           electricityRate: scooter.electricityRate,
           location: "Home",
-          notes: "Recorded via telemetry gauge",
+          notes: "Quick telemetry log",
         },
         scooter
       );
@@ -109,33 +136,28 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-5 max-w-5xl mx-auto font-mono-num">
-      {/* Linear-Style Minimal Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
-        <div className="space-y-0.5">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-widest">
-            <Terminal className="h-3.5 w-3.5 text-zinc-400" />
-            <span>TELEMETRY CONSOLE</span>
-            <span>/</span>
-            <span className="text-foreground">{scooter?.name}</span>
-          </div>
-          <h1 className="text-lg font-bold text-foreground tracking-tight">
-            Vehicle Energy & Charging Operations
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Charging Dashboard
           </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {scooter?.name} • {scooter?.model} ({scooter?.batteryCapacity} kWh)
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link href="/add-session">
-            <Button size="sm" className="h-8 text-xs font-medium gap-1.5 px-3 bg-zinc-100 text-zinc-900 hover:bg-white">
-              <Plus className="h-3.5 w-3.5" />
-              <span>Full Form</span>
-            </Button>
-          </Link>
-        </div>
+        <Link href="/add-session">
+          <Button className="gap-2 font-medium ios-touch">
+            <Plus className="h-4 w-4" />
+            <span>Full Session Form</span>
+          </Button>
+        </Link>
       </div>
 
-      {/* 🔋 INTERACTIVE VISUAL BATTERY GAUGE */}
-      <div className="space-y-2">
+      {/* Interactive shadcn/ui Battery Gauge + Quick Commit */}
+      <div className="space-y-3">
         <VisualBatteryGauge
           startPct={gaugeStart}
           endPct={gaugeEnd}
@@ -149,184 +171,293 @@ export default function DashboardPage() {
           interactive={true}
         />
 
-        {/* Quick-commit button attached to the gauge */}
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-1.5 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             {[
               { s: 20, e: 80 },
               { s: 20, e: 100 },
               { s: 10, e: 100 },
               { s: 30, e: 90 },
-            ].map((preset) => (
-              <button
-                key={`${preset.s}-${preset.e}`}
-                type="button"
-                onClick={() => {
-                  setGaugeStart(preset.s);
-                  setGaugeEnd(preset.e);
-                }}
-                className="text-[11px] px-2.5 py-1 rounded bg-zinc-900 border border-border hover:border-zinc-700 text-zinc-400 hover:text-foreground transition-colors"
-              >
-                {preset.s}%→{preset.e}%
-              </button>
-            ))}
+            ].map((preset) => {
+              const active = gaugeStart === preset.s && gaugeEnd === preset.e;
+              return (
+                <Button
+                  key={`${preset.s}-${preset.e}`}
+                  type="button"
+                  size="sm"
+                  variant={active ? "secondary" : "outline"}
+                  onClick={() => {
+                    setGaugeStart(preset.s);
+                    setGaugeEnd(preset.e);
+                  }}
+                  className="h-8 text-xs font-mono-num ios-touch"
+                >
+                  {preset.s}% → {preset.e}%
+                </Button>
+              );
+            })}
           </div>
 
           <Button
             size="sm"
             onClick={handleLogFromGauge}
             disabled={loggingQuick || !quickCalc}
-            className="h-7 text-xs font-medium px-3 bg-emerald-500 hover:bg-emerald-400 text-black gap-1"
+            className="gap-1.5 font-medium ios-touch"
           >
-            <Zap className="h-3 w-3 fill-current" />
-            {loggingQuick ? "COMMITTING..." : `COMMIT TO LOG (₹${quickCalc ? quickCalc.totalCost.toFixed(2) : "0"})`}
+            {loggingQuick ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Zap className="h-3.5 w-3.5 fill-current" />
+            )}
+            <span>
+              {loggingQuick
+                ? "Saving..."
+                : `Quick Log (${quickCalc ? formatCurrency(quickCalc.totalCost) : "₹0.00"})`}
+            </span>
           </Button>
         </div>
       </div>
 
-      {/* Strict Minimal Executive Metric Grid (Notion/Linear style) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="linear-box p-3 space-y-1">
-          <div className="text-[11px] text-muted-foreground uppercase tracking-wider">TOTAL SPEND</div>
-          <div className="text-xl font-bold text-foreground">
-            {formatCurrency(stats.totalExpenditure)}
-          </div>
-          <div className="text-[10px] text-muted-foreground">
-            {stats.totalSessions} sessions recorded
-          </div>
-        </div>
-
-        <div className="linear-box p-3 space-y-1">
-          <div className="text-[11px] text-muted-foreground uppercase tracking-wider">GRID DRAWN</div>
-          <div className="text-xl font-bold text-foreground">
-            {formatNumber(stats.totalElectricity, 1)} <span className="text-xs text-muted-foreground font-normal">kWh</span>
-          </div>
-          <div className="text-[10px] text-muted-foreground">
-            Domestic meter units
-          </div>
-        </div>
-
-        <div className="linear-box p-3 space-y-1">
-          <div className="text-[11px] text-muted-foreground uppercase tracking-wider">COST EFFICIENCY</div>
-          <div className="text-xl font-bold text-foreground">
-            {stats.costPerKm !== null ? `${formatCurrency(stats.costPerKm)}/km` : "—"}
-          </div>
-          <div className="text-[10px] text-emerald-400">
-            {stats.totalDistance > 0 ? `${formatNumber(stats.totalDistance, 0)} km logged` : "No odometer logged"}
-          </div>
-        </div>
-
-        <div className="linear-box p-3 space-y-1">
-          <div className="text-[11px] text-muted-foreground uppercase tracking-wider">AVG CYCLE COST</div>
-          <div className="text-xl font-bold text-foreground">
-            {formatCurrency(stats.averageCost)}
-          </div>
-          <div className="text-[10px] text-muted-foreground">
-            +{stats.averageAdded}% avg SOC added
-          </div>
-        </div>
-      </div>
-
-      {/* Date Filter Strip */}
-      <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded linear-box">
-        <span className="text-muted-foreground text-[11px] flex items-center gap-1.5">
-          <Filter className="h-3 w-3" />
-          TIMEFRAME:
-        </span>
-        <div className="flex items-center gap-1">
+      {/* Timeframe Filter Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card/50 p-2">
+        <span className="text-xs font-medium text-muted-foreground px-2">Timeframe</span>
+        <div className="flex flex-wrap gap-1">
           {DATE_FILTER_OPTIONS.map((opt) => (
-            <button
+            <Button
               key={opt.value}
+              size="sm"
+              variant={dateFilter === opt.value ? "default" : "ghost"}
               onClick={() => setDateFilter(opt.value)}
-              className={`text-[11px] px-2 py-0.5 rounded transition-colors ${
-                dateFilter === opt.value
-                  ? "bg-zinc-100 text-zinc-900 font-semibold"
-                  : "text-zinc-500 hover:text-zinc-200"
-              }`}
+              className="h-7 px-2.5 text-xs"
             >
               {opt.label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
-      {/* Chart: Minimalist Monospaced Series */}
-      {sessions.length > 0 && (
-        <div className="linear-box p-4 space-y-3">
-          <div className="flex items-center justify-between text-xs pb-2 border-b border-border">
-            <span className="font-semibold text-foreground uppercase tracking-wider">EXPENDITURE TIME-SERIES</span>
-            <span className="text-[11px] text-muted-foreground">{sessionChartData.length} records</span>
-          </div>
+      {/* KPI Summary Cards */}
+      {loading ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((n) => (
+            <Card key={n}>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-28 mb-2" />
+                <Skeleton className="h-3 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-5 sm:pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                Total Spend
+              </CardTitle>
+              <IndianRupee className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0">
+              <div className="text-2xl font-bold font-mono-num">
+                {formatCurrency(stats.totalExpenditure)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Across {stats.totalSessions} charging sessions
+              </p>
+            </CardContent>
+          </Card>
 
-          <div className="h-48 w-full pt-1">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={sessionChartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="2 2" stroke="#222227" opacity={0.6} />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#666" }} />
-                <YAxis tick={{ fontSize: 10, fill: "#666" }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#0c0c0e",
-                    borderColor: "#222227",
-                    borderRadius: "4px",
-                    fontSize: "11px",
-                    fontFamily: "monospace",
-                  }}
-                  formatter={(val: number) => [`₹${val.toFixed(2)}`, "Cost"]}
-                />
-                <Area
-                  type="stepAfter"
-                  dataKey="cost"
-                  stroke="#fafafa"
-                  strokeWidth={1.5}
-                  fillOpacity={0.08}
-                  fill="#fafafa"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-5 sm:pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                Grid Consumed
+              </CardTitle>
+              <Zap className="h-4 w-4 text-chart-2" />
+            </CardHeader>
+            <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0">
+              <div className="text-2xl font-bold font-mono-num">
+                {formatNumber(stats.totalElectricity, 1)}{" "}
+                <span className="text-sm font-normal text-muted-foreground">kWh</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Includes {scooter?.chargingLoss}% charging loss
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-5 sm:pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                Cost / km
+              </CardTitle>
+              <Gauge className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0">
+              <div className="text-2xl font-bold font-mono-num">
+                {stats.costPerKm !== null ? `${formatCurrency(stats.costPerKm)}/km` : "—"}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                {stats.totalDistance > 0 ? (
+                  <>
+                    <TrendingDown className="h-3 w-3 text-primary" />
+                    {formatNumber(stats.totalDistance, 0)} km tracked
+                  </>
+                ) : (
+                  "Log odometer to compute"
+                )}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-5 sm:pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                Avg Cost / Charge
+              </CardTitle>
+              <BatteryCharging className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0">
+              <div className="text-2xl font-bold font-mono-num">
+                {formatCurrency(stats.averageCost)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                +{stats.averageAdded}% average battery added
+              </p>
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      {/* Minimal Table (Notion / Linear Style Monospaced Rows) */}
-      {sessions.length > 0 && (
-        <div className="linear-box overflow-hidden">
-          <div className="p-3 border-b border-border flex items-center justify-between text-xs">
-            <span className="font-semibold uppercase tracking-wider text-foreground">RECENT LOG ENTRIES</span>
-            <Link href="/history" className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-[11px]">
-              VIEW FULL DATABASE
-              <ArrowUpRight className="h-3 w-3" />
-            </Link>
-          </div>
-
-          <div className="divide-y divide-border text-xs">
-            {sessions.slice(0, 5).map((s) => (
-              <div key={s.id} className="p-3 flex items-center justify-between hover:bg-zinc-900/40 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="text-zinc-500 text-[11px] w-24 whitespace-nowrap">
-                    {formatDate(s.date.toDate())}
-                  </div>
-                  <div className="font-semibold text-foreground">
-                    {s.startPercentage}% → {s.endPercentage}%
-                    <span className="ml-2 text-emerald-400 font-normal">(+{s.addedPercentage}%)</span>
-                  </div>
-                  <div className="text-zinc-500 text-[11px] hidden sm:block">
-                    {s.location || "Home"}
-                  </div>
-                </div>
-
-                <div className="text-right flex items-center gap-6">
-                  <span className="text-zinc-400 text-[11px]">
-                    {formatNumber(s.gridUnits, 2)} kWh
-                  </span>
-                  <span className="font-bold text-foreground w-16 text-right">
-                    {formatCurrency(s.totalCost)}
-                  </span>
-                </div>
+      {/* shadcn/ui ChartContainer */}
+      {!loading && sessions.length > 0 ? (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-base font-semibold">Charging Expenditure</CardTitle>
+              <CardDescription className="text-xs">
+                Electricity cost (₹) per recorded plug-in
+              </CardDescription>
+            </div>
+            <Badge variant="outline" className="font-mono-num text-xs">
+              {sessionChartData.length} sessions
+            </Badge>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-64 w-full">
+              <AreaChart
+                data={sessionChartData}
+                margin={{ top: 10, right: 10, left: -16, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="fillCost" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-cost)" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="var(--color-cost)" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  fontSize={11}
+                />
+                <YAxis tickLine={false} axisLine={false} fontSize={11} />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent indicator="line" />}
+                />
+                <Area
+                  dataKey="cost"
+                  type="monotone"
+                  fill="url(#fillCost)"
+                  stroke="var(--color-cost)"
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      ) : (
+        !loading && (
+          <Card className="border-dashed text-center py-10 px-4">
+            <CardContent className="space-y-3 pt-2">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <BatteryCharging className="h-6 w-6" />
               </div>
-            ))}
-          </div>
-        </div>
+              <div className="space-y-1">
+                <h3 className="font-semibold text-base">No sessions recorded yet</h3>
+                <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                  Use the battery gauge above for a 1-tap log, or open the full session form to record odometer &amp; notes.
+                </p>
+              </div>
+              <Link href="/add-session">
+                <Button size="sm" className="mt-2 gap-1.5">
+                  <Plus className="h-4 w-4" />
+                  Record First Session
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )
+      )}
+
+      {/* Recent Sessions Table */}
+      {!loading && sessions.length > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <div>
+              <CardTitle className="text-base font-semibold">Recent Plug-ins</CardTitle>
+              <CardDescription className="text-xs">Latest charging records</CardDescription>
+            </div>
+            <Link href="/history">
+              <Button variant="ghost" size="sm" className="text-xs gap-1">
+                View all
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-xs">Battery</TableHead>
+                  <TableHead className="hidden sm:table-cell text-xs">Location</TableHead>
+                  <TableHead className="text-right text-xs">Units</TableHead>
+                  <TableHead className="text-right text-xs">Cost</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sessions.slice(0, 5).map((s) => (
+                  <TableRow key={s.id}>
+                    <TableCell className="text-xs font-medium whitespace-nowrap">
+                      {formatDate(s.date.toDate())}
+                    </TableCell>
+                    <TableCell className="text-xs font-mono-num whitespace-nowrap">
+                      {s.startPercentage}% → {s.endPercentage}%{" "}
+                      <Badge variant="secondary" className="ml-1 text-[10px]">
+                        +{s.addedPercentage}%
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">
+                      {s.location || "Home"}
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-mono-num text-muted-foreground">
+                      {formatNumber(s.gridUnits, 2)} kWh
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-mono-num font-semibold">
+                      {formatCurrency(s.totalCost)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

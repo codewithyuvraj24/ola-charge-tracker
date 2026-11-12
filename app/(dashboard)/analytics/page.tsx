@@ -3,50 +3,44 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { useScooter } from "@/lib/scooter-context";
 import { getChargingSessions } from "@/lib/firestore";
-import {
-  computeDashboardStats,
-  computeMonthlyData,
-  computeSessionChartData,
-} from "@/lib/calculations";
+import { computeDashboardStats, computeMonthlyData } from "@/lib/calculations";
 import { formatCurrency, formatNumber, formatDate } from "@/lib/utils";
 import type { ChargingSession } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import {
   TrendingUp,
   IndianRupee,
   Zap,
-  BatteryCharging,
   Gauge,
-  Lightbulb,
   ArrowUpRight,
   ArrowDownRight,
   Sparkles,
   BarChart3,
   Calendar,
-  PieChart,
 } from "lucide-react";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  AreaChart,
-  Area,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  Legend,
-} from "recharts";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+
+const monthlyChartConfig = {
+  expenditure: {
+    label: "Expenditure (₹)",
+    color: "hsl(var(--chart-1))",
+  },
+  electricity: {
+    label: "Grid Power (kWh)",
+    color: "hsl(var(--chart-2))",
+  },
+} satisfies ChartConfig;
 
 export default function AnalyticsPage() {
   const { user } = useAuth();
-  const { scooter } = useScooter();
   const [sessions, setSessions] = useState<ChargingSession[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -69,7 +63,6 @@ export default function AnalyticsPage() {
   const stats = useMemo(() => computeDashboardStats(sessions), [sessions]);
   const monthlyData = useMemo(() => computeMonthlyData(sessions), [sessions]);
 
-  // Analytics extrema
   const extrema = useMemo(() => {
     if (sessions.length === 0) return { maxSession: null, minSession: null };
     const sorted = [...sessions].sort((a, b) => b.totalCost - a.totalCost);
@@ -79,21 +72,17 @@ export default function AnalyticsPage() {
     };
   }, [sessions]);
 
-  // Current month & year stats for insights
   const currentMonthInsight = useMemo(() => {
     const now = new Date();
     const thisMonthSessions = sessions.filter((s) => {
       const d = s.date.toDate();
-      return (
-        d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
-      );
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     });
     if (thisMonthSessions.length === 0) return null;
     const totalCost = thisMonthSessions.reduce((sum, s) => sum + s.totalCost, 0);
-    const avgCost = totalCost / thisMonthSessions.length;
     return {
       totalCost,
-      avgCost,
+      avgCost: totalCost / thisMonthSessions.length,
       count: thisMonthSessions.length,
     };
   }, [sessions]);
@@ -114,24 +103,22 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-primary">
           <TrendingUp className="h-4 w-4" />
-          Intelligence & Trends
+          Intelligence &amp; Trends
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mt-1">
           Charging Analytics
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Long-term energy consumption trends, cost metrics, and predictive insights.
+          Long-term energy consumption trends, cost metrics, and efficiency insights.
         </p>
       </div>
 
-      {/* Smart Insights Cards (Requirement 8) */}
+      {/* Smart Insights Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Insight 1: Current Month */}
-        <Card className="border-primary/30 bg-primary/5 shadow-sm">
+        <Card className="border-primary/30 bg-primary/5">
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center gap-2 text-xs font-medium text-primary">
               <Sparkles className="h-4 w-4" />
@@ -143,7 +130,7 @@ export default function AnalyticsPage() {
               <>
                 <p className="text-sm text-foreground">
                   Your average charging cost this month is{" "}
-                  <span className="font-bold text-primary">
+                  <span className="font-bold font-mono-num text-primary">
                     {formatCurrency(currentMonthInsight.avgCost)}
                   </span>
                   .
@@ -160,11 +147,10 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Insight 2: Annual Spend */}
-        <Card className="border-border/60 bg-card/70 shadow-sm">
+        <Card>
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-              <Calendar className="h-4 w-4 text-cyan-500" />
+              <Calendar className="h-4 w-4 text-chart-2" />
               Yearly Expenditure
             </div>
           </CardHeader>
@@ -173,7 +159,7 @@ export default function AnalyticsPage() {
               <>
                 <p className="text-sm text-foreground">
                   You have spent{" "}
-                  <span className="font-bold text-cyan-500">
+                  <span className="font-bold font-mono-num text-chart-2">
                     {formatCurrency(thisYearSpent)}
                   </span>{" "}
                   on electricity this year.
@@ -190,11 +176,10 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Insight 3: Cost Per KM */}
-        <Card className="border-border/60 bg-card/70 shadow-sm">
+        <Card>
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-              <Gauge className="h-4 w-4 text-emerald-500" />
+              <Gauge className="h-4 w-4 text-primary" />
               Riding Efficiency
             </div>
           </CardHeader>
@@ -203,7 +188,7 @@ export default function AnalyticsPage() {
               <>
                 <p className="text-sm text-foreground">
                   Your average charging cost per kilometre is{" "}
-                  <span className="font-bold text-emerald-500">
+                  <span className="font-bold font-mono-num text-primary">
                     {formatCurrency(stats.costPerKm)}/km
                   </span>
                   .
@@ -221,16 +206,15 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      {/* Analytics Key Statistics Grid */}
+      {/* Extrema Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Most Expensive Session */}
-        <Card className="border-border/60 shadow-sm bg-card/70">
+        <Card>
           <CardHeader className="p-4 pb-1">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-xs font-medium">Highest-Cost Charge</span>
               <ArrowUpRight className="h-4 w-4 text-destructive" />
             </div>
-            <CardTitle className="text-xl font-bold mt-1 text-foreground">
+            <CardTitle className="text-xl font-bold font-mono-num mt-1">
               {extrema.maxSession ? formatCurrency(extrema.maxSession.totalCost) : "—"}
             </CardTitle>
           </CardHeader>
@@ -241,14 +225,13 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Lowest Cost Session */}
-        <Card className="border-border/60 shadow-sm bg-card/70">
+        <Card>
           <CardHeader className="p-4 pb-1">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-xs font-medium">Lowest-Cost Charge</span>
               <ArrowDownRight className="h-4 w-4 text-primary" />
             </div>
-            <CardTitle className="text-xl font-bold mt-1 text-foreground">
+            <CardTitle className="text-xl font-bold font-mono-num mt-1">
               {extrema.minSession ? formatCurrency(extrema.minSession.totalCost) : "—"}
             </CardTitle>
           </CardHeader>
@@ -259,14 +242,13 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Average Units Per Session */}
-        <Card className="border-border/60 shadow-sm bg-card/70">
+        <Card>
           <CardHeader className="p-4 pb-1">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-xs font-medium">Avg Units / Session</span>
-              <Zap className="h-4 w-4 text-amber-500" />
+              <Zap className="h-4 w-4 text-chart-3" />
             </div>
-            <CardTitle className="text-xl font-bold mt-1 text-foreground">
+            <CardTitle className="text-xl font-bold font-mono-num mt-1">
               {formatNumber(avgUnitsPerSession, 2)}{" "}
               <span className="text-xs font-normal text-muted-foreground">kWh</span>
             </CardTitle>
@@ -276,14 +258,13 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Average Cost Per Session */}
-        <Card className="border-border/60 shadow-sm bg-card/70">
+        <Card>
           <CardHeader className="p-4 pb-1">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-xs font-medium">Avg Session Cost</span>
               <IndianRupee className="h-4 w-4 text-primary" />
             </div>
-            <CardTitle className="text-xl font-bold mt-1 text-foreground">
+            <CardTitle className="text-xl font-bold font-mono-num mt-1">
               {formatCurrency(stats.averageCost)}
             </CardTitle>
           </CardHeader>
@@ -293,48 +274,34 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      {/* Monthly Breakdown Charts */}
-      {monthlyData.length > 0 ? (
+      {/* shadcn/ui ChartContainers */}
+      {!loading && monthlyData.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Monthly Expenditure Trend */}
-          <Card className="border-border/60 shadow-md bg-card/70">
+          <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold">
-                Monthly Expenditure (₹)
-              </CardTitle>
+              <CardTitle className="text-base font-semibold">Monthly Expenditure (₹)</CardTitle>
               <CardDescription className="text-xs">
                 Total money spent on scooter electricity by month
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-2">
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        borderColor: "hsl(var(--border))",
-                        borderRadius: "8px",
-                        fontSize: "12px",
-                      }}
-                      formatter={(val: number) => [`₹${val.toFixed(2)}`, "Expenditure"]}
-                    />
-                    <Bar
-                      dataKey="expenditure"
-                      fill="hsl(var(--primary))"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <ChartContainer config={monthlyChartConfig} className="h-72 w-full">
+                <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -16, bottom: 0 }}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={11} />
+                  <YAxis tickLine={false} axisLine={false} fontSize={11} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar
+                    dataKey="expenditure"
+                    fill="var(--color-expenditure)"
+                    radius={[6, 6, 0, 0]}
+                  />
+                </BarChart>
+              </ChartContainer>
             </CardContent>
           </Card>
 
-          {/* Monthly Electricity Consumption Trend */}
-          <Card className="border-border/60 shadow-md bg-card/70">
+          <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold">
                 Monthly Grid Electricity (kWh)
@@ -344,58 +311,49 @@ export default function AnalyticsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-2">
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="elecGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.5} />
-                        <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0.0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        borderColor: "hsl(var(--border))",
-                        borderRadius: "8px",
-                        fontSize: "12px",
-                      }}
-                      formatter={(val: number) => [`${val.toFixed(2)} kWh`, "Grid Electricity"]}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="electricity"
-                      stroke="hsl(var(--chart-2))"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#elecGrad)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              <ChartContainer config={monthlyChartConfig} className="h-72 w-full">
+                <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -16, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="elecGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-electricity)" stopOpacity={0.45} />
+                      <stop offset="95%" stopColor="var(--color-electricity)" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={11} />
+                  <YAxis tickLine={false} axisLine={false} fontSize={11} />
+                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                  <Area
+                    type="monotone"
+                    dataKey="electricity"
+                    stroke="var(--color-electricity)"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#elecGrad)"
+                  />
+                </AreaChart>
+              </ChartContainer>
             </CardContent>
           </Card>
         </div>
       ) : (
-        <Card className="border-dashed border-2 border-border/70 bg-card/40 p-8 text-center space-y-3">
-          <BarChart3 className="h-10 w-10 text-muted-foreground mx-auto opacity-50" />
-          <p className="font-semibold text-foreground">
-            Not enough data for monthly trends yet
-          </p>
-          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-            Once you log charging sessions across days and months, interactive trend charts and spend projections will render here.
-          </p>
-          <Link href="/add-session">
-            <Button size="sm" className="font-semibold mt-2">
-              Record a Session
-            </Button>
-          </Link>
-        </Card>
+        !loading && (
+          <Card className="border-dashed text-center py-10 px-4">
+            <CardContent className="space-y-3 pt-2">
+              <BarChart3 className="h-10 w-10 text-muted-foreground mx-auto opacity-50" />
+              <p className="font-semibold text-foreground">Not enough data for monthly trends yet</p>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                Once you log charging sessions across days and months, interactive trend charts and spend projections will render here.
+              </p>
+              <Link href="/add-session">
+                <Button size="sm" className="font-semibold mt-2">
+                  Record a Session
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )
       )}
     </div>
   );
 }
-

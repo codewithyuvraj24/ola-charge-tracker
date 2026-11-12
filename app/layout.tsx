@@ -25,8 +25,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#070b14" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -43,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ThemeProvider defaultTheme="cyberpunk">
+        <ThemeProvider defaultTheme="emerald">
           <AuthProvider>
             {children}
             <Toaster />

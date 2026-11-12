@@ -1,7 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
+import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { BatteryCharging, Info } from "lucide-react";
 
 interface BatteryGaugeProps {
   startPct: number;
@@ -34,146 +39,169 @@ export function VisualBatteryGauge({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
-      className="linear-box p-4 space-y-4 font-mono-num"
     >
-      {/* Telemetry Header */}
-      <div className="flex items-center justify-between text-xs pb-3 border-b border-border">
-        <div className="flex items-center gap-2">
-          <motion.span
-            animate={{ scale: [1, 1.25, 1], opacity: [0.7, 1, 0.7] }}
-            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-            className="h-2 w-2 rounded-full bg-emerald-400 inline-block shadow-sm shadow-emerald-400/50"
-          />
-          <span className="font-semibold text-foreground tracking-tight">BATTERY PACK TELEMETRY</span>
-          <span className="text-muted-foreground">({capacityKwh.toFixed(1)} kWh)</span>
-        </div>
-        <div className="flex items-center gap-3 text-muted-foreground text-[11px]">
-          <span>LOSS: {lossPct}%</span>
-          <span>•</span>
-          <span>RATE: ₹{ratePerKwh}/kWh</span>
-        </div>
-      </div>
-
-      {/* Visual Hardware Battery Pack Chassis */}
-      <div className="space-y-2">
-        <div className="relative p-1.5 rounded-md border border-border bg-black/60 shadow-inner">
-          <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-border rounded-r-xs" />
-
-          {/* Segmented Cell Bar */}
-          <div className="h-9 w-full flex gap-[2px] items-stretch overflow-hidden">
-            {Array.from({ length: totalTicks }).map((_, i) => {
-              const tickPct = (i / totalTicks) * 100;
-              const isBaseCharge = tickPct < startPct;
-              const isAddedCharge = tickPct >= startPct && tickPct < endPct;
-
-              let cellColor = "bg-zinc-900";
-              if (isBaseCharge) {
-                cellColor = "bg-zinc-600";
-              } else if (isAddedCharge) {
-                cellColor = "bg-emerald-400 shadow-xs shadow-emerald-400/40";
-              }
-
-              return (
-                <motion.div
-                  key={i}
-                  animate={{
-                    opacity: isAddedCharge ? [0.85, 1, 0.85] : 1,
-                  }}
-                  transition={{
-                    duration: 1.5,
-                    repeat: isAddedCharge ? Infinity : 0,
-                    delay: (i % 5) * 0.1,
-                  }}
-                  className={`flex-1 transition-colors duration-150 ${cellColor} rounded-[1px]`}
-                  title={`${Math.round(tickPct)}%`}
-                />
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Precise Legend & Readings */}
-        <div className="flex items-center justify-between text-xs pt-1">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5 text-muted-foreground">
-              <span className="h-2 w-2 rounded-xs bg-zinc-600 inline-block" />
-              Start: <strong className="text-foreground">{startPct}%</strong>
-            </span>
-            <span className="flex items-center gap-1.5 text-emerald-400">
-              <span className="h-2 w-2 rounded-xs bg-emerald-400 inline-block" />
-              Added: <strong>+{addedPct}%</strong>
-            </span>
-            <span className="flex items-center gap-1.5 text-foreground font-semibold">
-              End: <strong>{endPct}%</strong>
-            </span>
-          </div>
-
-          <div className="text-right text-[11px] text-muted-foreground">
-            {((startPct / 100) * capacityKwh).toFixed(2)} kWh → {((endPct / 100) * capacityKwh).toFixed(2)} kWh
-          </div>
-        </div>
-      </div>
-
-      {/* Interactive Touch Sliders */}
-      {interactive && onRangeChange && (
-        <div className="pt-2 border-t border-border space-y-3">
-          <div className="grid grid-cols-2 gap-4 text-xs">
-            <div className="space-y-1">
-              <div className="flex justify-between text-muted-foreground text-[11px]">
-                <span>START SOC</span>
-                <span className="text-foreground font-semibold">{startPct}%</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max={Math.max(0, endPct - 1)}
-                value={startPct}
-                onChange={(e) => onRangeChange(parseInt(e.target.value) || 0, endPct)}
-                className="w-full h-1.5 bg-zinc-800 rounded-sm appearance-none cursor-pointer accent-zinc-300"
-              />
+      <Card className="overflow-hidden border-border">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 border-b border-border/60">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/15 text-primary">
+              <BatteryCharging className="h-4 w-4" />
             </div>
-
-            <div className="space-y-1">
-              <div className="flex justify-between text-muted-foreground text-[11px]">
-                <span>TARGET SOC</span>
-                <span className="text-emerald-400 font-semibold">{endPct}%</span>
-              </div>
-              <input
-                type="range"
-                min={startPct + 1}
-                max="100"
-                value={endPct}
-                onChange={(e) => onRangeChange(startPct, parseInt(e.target.value) || 100)}
-                className="w-full h-1.5 bg-zinc-800 rounded-sm appearance-none cursor-pointer accent-emerald-400"
-              />
+            <div>
+              <CardTitle className="text-sm font-semibold tracking-tight flex items-center gap-2">
+                Battery Pack Telemetry
+                <Badge variant="secondary" className="font-mono-num text-[10px] font-medium">
+                  {capacityKwh.toFixed(1)} kWh
+                </Badge>
+              </CardTitle>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Live Math Readouts with Motion Number transitions */}
-      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border text-center text-xs">
-        <div className="p-2.5 rounded bg-zinc-950/60 border border-border/60">
-          <div className="text-[10px] text-muted-foreground uppercase">Pack Energy Stored</div>
-          <div className="text-sm font-bold text-foreground mt-0.5">
-            {storedKwh.toFixed(2)} <span className="text-[10px] font-normal text-muted-foreground">kWh</span>
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono-num">
+            <span>Loss {lossPct}%</span>
+            <span>•</span>
+            <span>₹{ratePerKwh}/kWh</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="text-muted-foreground hover:text-foreground">
+                  <Info className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="max-w-xs text-xs">
+                Grid energy accounts for {lossPct}% charger &amp; thermal conversion loss.
+              </TooltipContent>
+            </Tooltip>
           </div>
-        </div>
+        </CardHeader>
 
-        <div className="p-2.5 rounded bg-zinc-950/60 border border-border/60">
-          <div className="text-[10px] text-muted-foreground uppercase">Grid Power Drawn</div>
-          <div className="text-sm font-bold text-foreground mt-0.5">
-            {gridKwh.toFixed(2)} <span className="text-[10px] font-normal text-muted-foreground">units</span>
-          </div>
-        </div>
+        <CardContent className="p-4 sm:p-5 space-y-4">
+          {/* Segmented Hardware Battery Pack Visual */}
+          <div className="space-y-2">
+            <div className="relative p-1.5 rounded-lg border border-border bg-muted/40">
+              <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-1 h-5 bg-border rounded-r-sm" />
+              <div className="h-8 w-full flex gap-[2px] items-stretch overflow-hidden rounded-sm">
+                {Array.from({ length: totalTicks }).map((_, i) => {
+                  const tickPct = (i / totalTicks) * 100;
+                  const isBaseCharge = tickPct < startPct;
+                  const isAddedCharge = tickPct >= startPct && tickPct < endPct;
 
-        <div className="p-2.5 rounded bg-emerald-950/30 border border-emerald-900/50">
-          <div className="text-[10px] text-emerald-400 uppercase">Estimated Tariff</div>
-          <div className="text-sm font-bold text-emerald-400 mt-0.5">
-            ₹{cost.toFixed(2)}
+                  let cellClass = "bg-muted";
+                  if (isBaseCharge) {
+                    cellClass = "bg-muted-foreground/40";
+                  } else if (isAddedCharge) {
+                    cellClass = "bg-primary";
+                  }
+
+                  return (
+                    <motion.div
+                      key={i}
+                      animate={{
+                        opacity: isAddedCharge ? [0.8, 1, 0.8] : 1,
+                      }}
+                      transition={{
+                        duration: 1.6,
+                        repeat: isAddedCharge ? Infinity : 0,
+                        delay: (i % 5) * 0.1,
+                      }}
+                      className={`flex-1 transition-colors duration-150 ${cellClass} rounded-[1px]`}
+                      title={`${Math.round(tickPct)}%`}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono-num">
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <span className="h-2 w-2 rounded-sm bg-muted-foreground/40 inline-block" />
+                  Start <strong className="text-foreground">{startPct}%</strong>
+                </span>
+                <span className="flex items-center gap-1.5 text-primary">
+                  <span className="h-2 w-2 rounded-sm bg-primary inline-block" />
+                  Added <strong>+{addedPct}%</strong>
+                </span>
+                <span className="text-foreground font-semibold">End {endPct}%</span>
+              </div>
+
+              <span className="text-[11px] text-muted-foreground">
+                {((startPct / 100) * capacityKwh).toFixed(2)} → {((endPct / 100) * capacityKwh).toFixed(2)} kWh
+              </span>
+            </div>
           </div>
-        </div>
-      </div>
+
+          {/* Interactive shadcn/ui Sliders */}
+          {interactive && onRangeChange && (
+            <>
+              <Separator />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 py-1">
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-muted-foreground">Start Battery</span>
+                    <Badge variant="outline" className="font-mono-num text-xs">
+                      {startPct}%
+                    </Badge>
+                  </div>
+                  <Slider
+                    min={0}
+                    max={Math.max(0, endPct - 1)}
+                    step={1}
+                    value={[startPct]}
+                    onValueChange={([val]) => onRangeChange(val, endPct)}
+                    aria-label="Starting battery percentage"
+                  />
+                </div>
+
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-muted-foreground">Target Battery</span>
+                    <Badge variant="default" className="font-mono-num text-xs">
+                      {endPct}%
+                    </Badge>
+                  </div>
+                  <Slider
+                    min={Math.min(100, startPct + 1)}
+                    max={100}
+                    step={1}
+                    value={[endPct]}
+                    onValueChange={([val]) => onRangeChange(startPct, val)}
+                    aria-label="Target battery percentage"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Readouts Grid */}
+          <div className="grid grid-cols-3 gap-2.5 pt-1">
+            <div className="rounded-lg border border-border bg-muted/30 p-3 text-center">
+              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Stored
+              </div>
+              <div className="mt-1 text-sm sm:text-base font-bold font-mono-num text-foreground">
+                {storedKwh.toFixed(2)} <span className="text-[11px] font-normal text-muted-foreground">kWh</span>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-border bg-muted/30 p-3 text-center">
+              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Grid Drawn
+              </div>
+              <div className="mt-1 text-sm sm:text-base font-bold font-mono-num text-foreground">
+                {gridKwh.toFixed(2)} <span className="text-[11px] font-normal text-muted-foreground">units</span>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-center">
+              <div className="text-[10px] font-medium uppercase tracking-wider text-primary">
+                Est. Cost
+              </div>
+              <div className="mt-1 text-sm sm:text-base font-bold font-mono-num text-primary">
+                ₹{cost.toFixed(2)}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </motion.div>
   );
 }

@@ -123,164 +123,184 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="appearance" className="space-y-6">
-        <TabsList className="ios-glass p-1 rounded-2xl">
-          <TabsTrigger value="appearance" className="gap-2 text-xs rounded-xl">
+        <TabsList className="grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
+          <TabsTrigger value="appearance" className="gap-2 text-xs">
             <Palette className="h-3.5 w-3.5 text-primary" />
-            Theme Gallery (Live Demo)
+            <span className="truncate">Themes</span>
           </TabsTrigger>
-          <TabsTrigger value="scooter" className="gap-2 text-xs rounded-xl">
+          <TabsTrigger value="scooter" className="gap-2 text-xs">
             <Bike className="h-3.5 w-3.5" />
-            Scooter Specs
+            <span className="truncate">Scooter Specs</span>
           </TabsTrigger>
-          <TabsTrigger value="profile" className="gap-2 text-xs rounded-xl">
+          <TabsTrigger value="profile" className="gap-2 text-xs">
             <User className="h-3.5 w-3.5" />
-            Profile & Currency
+            <span className="truncate">Profile</span>
           </TabsTrigger>
         </TabsList>
 
         {/* Live Theme Gallery Tab */}
         <TabsContent value="appearance" className="space-y-4">
-          <Card className="ios-glass-card p-5 space-y-3">
-            <div>
-              <CardTitle className="text-base font-bold">Select Active Visual Theme</CardTitle>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">Select Active Visual Theme</CardTitle>
               <CardDescription className="text-xs">
-                Tap any card to instantly switch the entire app&apos;s colors and contrast live.
+                Tap any theme to switch the entire app&apos;s palette and contrast live.
               </CardDescription>
-            </div>
-            <ThemePreviewSwitcher />
+            </CardHeader>
+            <CardContent>
+              <ThemePreviewSwitcher />
+            </CardContent>
           </Card>
         </TabsContent>
 
         {/* Scooter Configuration Tab */}
         <TabsContent value="scooter" className="space-y-4">
-          <Card className="ios-glass-card p-5 space-y-4">
-            <div className="flex items-center gap-2 text-xs text-primary font-semibold">
-              <ShieldCheck className="h-4 w-4" />
-              Historical Integrity Guaranteed: Changes apply only to new sessions.
-            </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">Vehicle & Tariff Configuration</CardTitle>
+              <CardDescription className="flex items-center gap-1.5 text-xs text-primary font-medium pt-0.5">
+                <ShieldCheck className="h-4 w-4 shrink-0" />
+                Historical Integrity Guaranteed: Changes apply only to new sessions.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form id="scooter-form" onSubmit={handleSaveScooter} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="scooter-name" className="text-xs">Scooter Name</Label>
+                    <Input
+                      id="scooter-name"
+                      value={scooterForm.name}
+                      onChange={(e) => setScooterForm({ ...scooterForm, name: e.target.value })}
+                      className="h-10"
+                      required
+                    />
+                  </div>
 
-            <form id="scooter-form" onSubmit={handleSaveScooter} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="scooter-name" className="text-xs">Scooter Name</Label>
-                  <Input
-                    id="scooter-name"
-                    value={scooterForm.name}
-                    onChange={(e) => setScooterForm({ ...scooterForm, name: e.target.value })}
-                    className="rounded-xl h-11"
-                    required
-                  />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="scooter-model" className="text-xs">Model</Label>
+                    <Select
+                      value={scooterForm.model}
+                      onValueChange={(val) => setScooterForm({ ...scooterForm, model: val })}
+                    >
+                      <SelectTrigger id="scooter-model" className="h-10">
+                        <SelectValue placeholder="Select model" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SCOOTER_MODELS.map((m) => (
+                          <SelectItem key={m} value={m}>
+                            {m}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="scooter-model" className="text-xs">Model</Label>
-                  <Select
-                    value={scooterForm.model}
-                    onValueChange={(val) => setScooterForm({ ...scooterForm, model: val })}
-                  >
-                    <SelectTrigger className="rounded-xl h-11">
-                      <SelectValue placeholder="Select model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SCOOTER_MODELS.map((m) => (
-                        <SelectItem key={m} value={m}>
-                          {m}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="scooter-cap" className="text-xs">Capacity (kWh)</Label>
+                    <Input
+                      id="scooter-cap"
+                      type="number"
+                      step="0.1"
+                      value={scooterForm.batteryCapacity}
+                      onChange={(e) =>
+                        setScooterForm({
+                          ...scooterForm,
+                          batteryCapacity: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="h-10 font-mono-num"
+                    />
+                  </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Capacity (kWh)</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={scooterForm.batteryCapacity}
-                    onChange={(e) =>
-                      setScooterForm({
-                        ...scooterForm,
-                        batteryCapacity: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="rounded-xl h-11"
-                  />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="scooter-rate" className="text-xs">Rate (₹/kWh)</Label>
+                    <Input
+                      id="scooter-rate"
+                      type="number"
+                      step="0.5"
+                      value={scooterForm.electricityRate}
+                      onChange={(e) =>
+                        setScooterForm({
+                          ...scooterForm,
+                          electricityRate: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="h-10 font-mono-num"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="scooter-loss" className="text-xs">Loss (%)</Label>
+                    <Input
+                      id="scooter-loss"
+                      type="number"
+                      value={scooterForm.chargingLoss}
+                      onChange={(e) =>
+                        setScooterForm({
+                          ...scooterForm,
+                          chargingLoss: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="h-10 font-mono-num"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <Label className="text-xs">Rate (₹/kWh)</Label>
-                  <Input
-                    type="number"
-                    step="0.5"
-                    value={scooterForm.electricityRate}
-                    onChange={(e) =>
-                      setScooterForm({
-                        ...scooterForm,
-                        electricityRate: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="rounded-xl h-11"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs">Loss (%)</Label>
-                  <Input
-                    type="number"
-                    value={scooterForm.chargingLoss}
-                    onChange={(e) =>
-                      setScooterForm({
-                        ...scooterForm,
-                        chargingLoss: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="rounded-xl h-11"
-                  />
-                </div>
-              </div>
-
-              <Button type="submit" disabled={savingScooter} className="rounded-xl font-bold text-xs mt-2">
-                {savingScooter ? "Saving..." : "Save Scooter Settings"}
-              </Button>
-            </form>
+                <Button type="submit" disabled={savingScooter} className="font-semibold text-xs ios-touch">
+                  {savingScooter && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                  {savingScooter ? "Saving..." : "Save Scooter Settings"}
+                </Button>
+              </form>
+            </CardContent>
           </Card>
         </TabsContent>
 
         {/* Profile Tab */}
         <TabsContent value="profile" className="space-y-4">
-          <Card className="ios-glass-card p-5 space-y-4">
-            <form id="profile-form" onSubmit={handleSaveProfile} className="space-y-4">
-              <div className="space-y-1">
-                <Label className="text-xs">Display Name</Label>
-                <Input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="rounded-xl h-11"
-                  required
-                />
-              </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">Profile & Display Preferences</CardTitle>
+              <CardDescription className="text-xs">
+                Manage your display name and preferred currency symbol.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form id="profile-form" onSubmit={handleSaveProfile} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="profile-name" className="text-xs">Display Name</Label>
+                  <Input
+                    id="profile-name"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="h-10"
+                    required
+                  />
+                </div>
 
-              <div className="space-y-1">
-                <Label className="text-xs">Currency</Label>
-                <Select value={currency} onValueChange={(val) => setCurrency(val)}>
-                  <SelectTrigger className="rounded-xl h-11">
-                    <SelectValue placeholder="Select currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="₹">₹ (INR - Indian Rupee)</SelectItem>
-                    <SelectItem value="$">$ (USD - US Dollar)</SelectItem>
-                    <SelectItem value="€">€ (EUR - Euro)</SelectItem>
-                    <SelectItem value="£">£ (GBP - British Pound)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="profile-currency" className="text-xs">Currency</Label>
+                  <Select value={currency} onValueChange={(val) => setCurrency(val)}>
+                    <SelectTrigger id="profile-currency" className="h-10">
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="₹">₹ (INR - Indian Rupee)</SelectItem>
+                      <SelectItem value="$">$ (USD - US Dollar)</SelectItem>
+                      <SelectItem value="€">€ (EUR - Euro)</SelectItem>
+                      <SelectItem value="£">£ (GBP - British Pound)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <Button type="submit" disabled={savingProfile} className="rounded-xl font-bold text-xs">
-                {savingProfile ? "Saving..." : "Save Preferences"}
-              </Button>
-            </form>
+                <Button type="submit" disabled={savingProfile} className="font-semibold text-xs ios-touch">
+                  {savingProfile && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                  {savingProfile ? "Saving..." : "Save Preferences"}
+                </Button>
+              </form>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>

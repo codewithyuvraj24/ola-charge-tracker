@@ -3,40 +3,147 @@
 @tailwind utilities;
 
 @layer base {
+  /* Light Theme (shadcn/ui default tokens + EV emerald accent) */
   :root {
-    /* Apple iOS 17 Dark Canvas with Linear precision */
-    --background: 240 10% 4%;         /* #09090b */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 152 68% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 152 68% 36%;
+    --radius: 0.625rem;
+    --chart-1: 152 68% 38%;
+    --chart-2: 199 89% 48%;
+    --chart-3: 43 74% 49%;
+    --chart-4: 262 83% 58%;
+    --chart-5: 346 84% 56%;
+  }
+
+  /* Default Dark Mode (shadcn/ui zinc/slate + EV emerald) */
+  .dark,
+  [data-theme="emerald"] {
+    --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
-    --card: 240 7% 7.5%;              /* #121215 - Apple OLED card elevation */
+    --card: 240 10% 5.5%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 7% 7.5%;
+    --popover: 240 10% 5.5%;
     --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 10% 4%;
+    --primary: 152 69% 45%;
+    --primary-foreground: 240 10% 3.9%;
+    --secondary: 240 3.7% 13.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 13.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 45%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 152 69% 45%;
+    --chart-1: 152 69% 45%;
+    --chart-2: 199 89% 52%;
+    --chart-3: 42 96% 56%;
+    --chart-4: 262 83% 62%;
+    --chart-5: 346 84% 60%;
+  }
+
+  [data-theme="cyberpunk"] {
+    --background: 240 10% 3%;
+    --foreground: 0 0% 98%;
+    --card: 240 8% 6.5%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 8% 6.5%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 74 100% 50%;
+    --primary-foreground: 0 0% 0%;
     --secondary: 240 6% 12%;
     --secondary-foreground: 0 0% 98%;
     --muted: 240 6% 12%;
-    --muted-foreground: 240 5% 60%;
-    --accent: 142 70% 50%;
-    --accent-foreground: 0 0% 0%;
-    --destructive: 0 62% 50%;
-    --destructive-foreground: 0 0% 98%;
+    --muted-foreground: 240 5% 65%;
+    --accent: 240 6% 15%;
+    --accent-foreground: 0 0% 98%;
     --border: 240 6% 16%;
     --input: 240 6% 16%;
-    --ring: 0 0% 98%;
-    --radius: 0.75rem;                /* 12px Apple squircle */
+    --ring: 74 100% 50%;
+    --chart-1: 74 100% 50%;
+    --chart-2: 187 100% 50%;
+    --chart-3: 42 96% 56%;
+    --chart-4: 262 83% 62%;
+    --chart-5: 346 84% 60%;
+  }
+
+  [data-theme="stealth"] {
+    --background: 220 15% 7%;
+    --foreground: 210 20% 98%;
+    --card: 220 14% 10%;
+    --card-foreground: 210 20% 98%;
+    --popover: 220 14% 10%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 199 89% 52%;
+    --primary-foreground: 220 20% 6%;
+    --secondary: 220 12% 15%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 220 12% 15%;
+    --muted-foreground: 220 10% 64%;
+    --accent: 220 12% 18%;
+    --accent-foreground: 210 20% 98%;
+    --border: 220 12% 18%;
+    --input: 220 12% 18%;
+    --ring: 199 89% 52%;
+    --chart-1: 199 89% 52%;
+    --chart-2: 152 69% 45%;
+    --chart-3: 42 96% 56%;
+    --chart-4: 262 83% 62%;
+    --chart-5: 346 84% 60%;
+  }
+
+  [data-theme="solar"] {
+    --background: 20 20% 5%;
+    --foreground: 30 20% 98%;
+    --card: 20 16% 8.5%;
+    --card-foreground: 30 20% 98%;
+    --popover: 20 16% 8.5%;
+    --popover-foreground: 30 20% 98%;
+    --primary: 24 95% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 20 14% 14%;
+    --secondary-foreground: 30 20% 98%;
+    --muted: 20 14% 14%;
+    --muted-foreground: 25 15% 65%;
+    --accent: 20 14% 17%;
+    --accent-foreground: 30 20% 98%;
+    --border: 20 15% 16%;
+    --input: 20 15% 16%;
+    --ring: 24 95% 53%;
+    --chart-1: 24 95% 53%;
+    --chart-2: 38 92% 50%;
+    --chart-3: 152 69% 45%;
+    --chart-4: 262 83% 62%;
+    --chart-5: 346 84% 60%;
   }
 }
 
 @layer base {
   * {
     @apply border-border;
-    box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
   }
-  
+
   html {
-    /* iOS 17 full viewport with no rubber banding on background */
     height: -webkit-fill-available;
     overscroll-behavior-y: none;
     -webkit-text-size-adjust: 100%;
@@ -46,10 +153,8 @@
     @apply bg-background text-foreground antialiased;
     min-height: 100vh;
     min-height: -webkit-fill-available;
-    /* Apple SF Pro system stack */
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "SF Pro Text", "SF Pro Display", sans-serif;
-    letter-spacing: -0.012em;
-    -webkit-font-smoothing: antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Inter, sans-serif;
+    letter-spacing: -0.011em;
   }
 
   .font-mono-num {
@@ -58,54 +163,38 @@
   }
 }
 
-/* iOS 17 Frosted Glass Material */
+/* iOS 17 Frosted Material & Touch Helpers */
 .ios-material {
-  background: rgba(18, 18, 22, 0.82);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: hsl(var(--card) / 0.84);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
-.ios-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-/* iOS Active Touch Spring */
 .ios-touch {
   transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), opacity 0.12s ease;
   user-select: none;
   -webkit-user-select: none;
 }
 .ios-touch:active {
-  transform: scale(0.96);
-  opacity: 0.85;
+  transform: scale(0.97);
+  opacity: 0.88;
 }
 
-/* Custom Touch Slider for iOS Range */
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  background: #27272a;
-  border-radius: 9999px;
-  height: 8px;
-}
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  cursor: pointer;
-}
-
-/* Safe areas */
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0px);
 }
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 9999px;
 }

@@ -5,7 +5,28 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ScooterProvider, useScooter } from "@/lib/scooter-context";
+import { useTheme, type AppTheme } from "@/lib/theme-provider";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   Zap,
   LayoutDashboard,
@@ -15,11 +36,23 @@ import {
   Settings,
   LogOut,
   Bike,
+  Palette,
+  ChevronsUpDown,
+  ShieldCheck,
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Add Session", href: "/add-session", icon: Plus },
   { label: "History", href: "/history", icon: History },
+  { label: "Analytics", href: "/analytics", icon: TrendingUp },
+  { label: "Settings", href: "/settings", icon: Settings },
+];
+
+const MOBILE_NAV = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "History", href: "/history", icon: History },
+  { label: "Add", href: "/add-session", icon: Plus, isPrimary: true },
   { label: "Analytics", href: "/analytics", icon: TrendingUp },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
@@ -29,6 +62,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, userProfile, loading, logout } = useAuth();
   const { scooter, loadingScooter } = useScooter();
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     if (!loading) {
@@ -43,169 +77,312 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   if (loading || loadingScooter) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3">
-        <Zap className="h-6 w-6 text-emerald-400 animate-pulse" />
-        <span className="text-xs text-muted-foreground font-mono-num">INITIALIZING TELEMETRY...</span>
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card shadow-sm">
+          <Zap className="h-5 w-5 text-primary animate-pulse" />
+        </div>
+        <span className="text-xs font-medium text-muted-foreground">
+          Loading workspace...
+        </span>
       </div>
     );
   }
 
   if (!user) return null;
 
+  const displayName = userProfile?.displayName || user.email?.split("@")[0] || "Rider";
+  const initials = displayName
+    .split(" ")
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  const cycleTheme = () => {
+    const list: AppTheme[] = ["emerald", "cyberpunk", "stealth", "solar", "light"];
+    const idx = list.indexOf(theme);
+    setTheme(list[(idx + 1) % list.length]);
+  };
+
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row pb-24 md:pb-0">
-      {/* Desktop macOS Sidebar */}
-      <aside className="hidden md:flex flex-col w-60 border-r border-border bg-card p-4 sticky top-0 h-screen font-mono-num">
-        <div className="flex items-center gap-2.5 px-2 py-2 mb-4">
-          <div className="h-7 w-7 rounded-md bg-white flex items-center justify-center text-black font-bold">
-            <Zap className="h-4 w-4 fill-current" />
-          </div>
-          <div>
-            <div className="font-bold text-sm leading-tight text-foreground tracking-tight">
-              OLA TELEMETRY
+    <TooltipProvider delayDuration={200}>
+      <div className="min-h-screen bg-background flex flex-col md:flex-row pb-24 md:pb-0">
+        {/* Desktop Sidebar */}
+        <aside className="hidden md:flex flex-col w-64 border-r border-border bg-card/60 p-4 sticky top-0 h-screen">
+          {/* Brand */}
+          <div className="flex items-center gap-2.5 px-2 py-1.5 mb-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+              <Zap className="h-4 w-4 fill-current" />
             </div>
-            <div className="text-[10px] text-muted-foreground">EXECUTIVE PRO</div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-sm tracking-tight text-foreground">
+                  Ola Charge
+                </span>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  v2
+                </Badge>
+              </div>
+              <span className="text-[11px] text-muted-foreground">EV Energy Tracker</span>
+            </div>
           </div>
-        </div>
 
-        {scooter && (
-          <div className="mb-4 rounded-md border border-border bg-black/40 p-2.5 text-xs space-y-1">
-            <div className="flex items-center justify-between font-semibold text-foreground">
-              <span className="flex items-center gap-1.5 truncate">
-                <Bike className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                {scooter.name}
-              </span>
-              <span className="text-[10px] text-zinc-400">{scooter.batteryCapacity} kWh</span>
+          {/* Active Vehicle Card */}
+          {scooter && (
+            <div className="mb-4 rounded-lg border border-border bg-background/70 p-3 space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground truncate">
+                  <Bike className="h-3.5 w-3.5 text-primary shrink-0" />
+                  {scooter.name}
+                </span>
+                <Badge variant="outline" className="font-mono-num text-[10px] shrink-0">
+                  {scooter.batteryCapacity} kWh
+                </Badge>
+              </div>
+              <div className="text-[11px] text-muted-foreground flex items-center justify-between">
+                <span className="truncate">{scooter.model}</span>
+                <span className="font-mono-num">₹{scooter.electricityRate}/u</span>
+              </div>
             </div>
-            <div className="text-[11px] text-muted-foreground truncate">
-              {scooter.model} • ₹{scooter.electricityRate}/u
-            </div>
-          </div>
-        )}
+          )}
 
-        <nav className="flex-1 space-y-1">
-          {NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-semibold transition-all ios-touch ${
-                  isActive
-                    ? "bg-zinc-100 text-zinc-950 font-bold"
-                    : "text-muted-foreground hover:text-foreground hover:bg-zinc-900"
-                }`}
+          {/* Quick Add CTA */}
+          <Link href="/add-session" className="mb-4">
+            <Button className="w-full justify-center gap-2 font-medium" size="sm">
+              <Plus className="h-4 w-4" />
+              <span>Record Session</span>
+            </Button>
+          </Link>
+
+          {/* Navigation */}
+          <nav className="flex-1 space-y-1">
+            {NAV_ITEMS.map((item) => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive
+                      ? "bg-secondary text-foreground font-semibold"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : ""}`} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Privacy Notice */}
+          <div className="my-3 flex items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
+            <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span>Private Firestore Sync</span>
+          </div>
+
+          <Separator className="mb-3" />
+
+          {/* User Dropdown Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full justify-between px-2 h-auto py-2 hover:bg-muted/60"
               >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+                <div className="flex items-center gap-2.5 min-w-0 text-left">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary/15 text-primary text-xs font-semibold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-foreground truncate">
+                      {displayName}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground truncate">
+                      {user.email}
+                    </div>
+                  </div>
+                </div>
+                <ChevronsUpDown className="h-4 w-4 text-muted-foreground shrink-0" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Signed in as <span className="font-medium text-foreground">{displayName}</span>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={cycleTheme} className="cursor-pointer">
+                <Palette className="mr-2 h-4 w-4 text-primary" />
+                <span>Switch Theme ({theme})</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="cursor-pointer text-destructive focus:text-destructive"
+                onClick={async () => {
+                  await logout();
+                  router.push("/");
+                }}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sign out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </aside>
 
-        <div className="border-t border-border pt-3 space-y-2">
-          <div className="px-2 truncate">
-            <div className="font-semibold text-xs text-foreground truncate">
-              {userProfile?.displayName || user.email?.split("@")[0]}
+        {/* Mobile Header (iOS 17 safe area + Sheet Drawer) */}
+        <header className="md:hidden flex items-center justify-between px-4 pt-safe py-2.5 border-b border-border/70 ios-material sticky top-0 z-30">
+          <Link href="/dashboard" className="flex items-center gap-2 ios-touch">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <Zap className="h-4 w-4 fill-current" />
             </div>
-            <div className="text-[10px] text-muted-foreground truncate font-mono">
-              {user.email}
+            <div className="leading-tight">
+              <div className="font-semibold text-sm text-foreground">Ola Charge</div>
+              <div className="text-[10px] text-muted-foreground">
+                {scooter?.name || "EV Tracker"}
+              </div>
             </div>
+          </Link>
+
+          <div className="flex items-center gap-2">
+            {scooter && (
+              <Badge variant="outline" className="font-mono-num text-[10px]">
+                {scooter.batteryCapacity} kWh
+              </Badge>
+            )}
+
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full ios-touch">
+                  <Avatar className="h-7 w-7">
+                    <AvatarFallback className="bg-primary/15 text-primary text-[11px] font-semibold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[82%] sm:max-w-sm">
+                <SheetHeader className="text-left">
+                  <SheetTitle className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary/15 text-primary text-xs font-semibold">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="truncate">{displayName}</span>
+                  </SheetTitle>
+                  <SheetDescription className="truncate">{user.email}</SheetDescription>
+                </SheetHeader>
+
+                <div className="mt-6 space-y-4">
+                  {scooter && (
+                    <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1">
+                      <div className="flex items-center justify-between text-xs font-semibold">
+                        <span className="flex items-center gap-1.5">
+                          <Bike className="h-3.5 w-3.5 text-primary" />
+                          {scooter.name}
+                        </span>
+                        <Badge variant="secondary" className="font-mono-num text-[10px]">
+                          {scooter.batteryCapacity} kWh
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {scooter.model} • ₹{scooter.electricityRate}/kWh • {scooter.chargingLoss}% loss
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start gap-2"
+                      onClick={cycleTheme}
+                    >
+                      <Palette className="h-4 w-4 text-primary" />
+                      <span>Theme: <strong className="capitalize">{theme}</strong></span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start gap-2"
+                      onClick={() => router.push("/settings")}
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Scooter & App Settings</span>
+                    </Button>
+
+                    <Separator className="my-2" />
+
+                    <Button
+                      variant="destructive"
+                      className="w-full justify-start gap-2"
+                      onClick={async () => {
+                        await logout();
+                        router.push("/");
+                      }}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Sign out</span>
+                    </Button>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
+        </header>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start text-xs h-8 text-zinc-400 hover:text-destructive hover:bg-destructive/10 rounded-md ios-touch"
-            onClick={async () => {
-              await logout();
-              router.push("/");
-            }}
-          >
-            <LogOut className="mr-2 h-3.5 w-3.5" />
-            Sign out
-          </Button>
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">{children}</div>
+        </main>
+
+        {/* Mobile Bottom Navigation (iOS 17 Frosted Tab Bar) */}
+        <div className="md:hidden fixed bottom-3 left-3 right-3 z-40">
+          <nav className="ios-material rounded-2xl p-1.5 shadow-2xl border border-border/80 flex items-center justify-around">
+            {MOBILE_NAV.map((item) => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
+
+              if (item.isPrimary) {
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="flex items-center justify-center -my-3 ios-touch"
+                    aria-label="Add Charging Session"
+                  >
+                    <div className="h-12 w-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg border-2 border-background">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                  </Link>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex flex-col items-center justify-center py-1.5 px-2.5 rounded-xl transition-colors ios-touch ${
+                    isActive
+                      ? "text-primary font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span className="text-[10px] mt-0.5">{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
         </div>
-      </aside>
-
-      {/* iOS 17 Header with Dynamic Island & Notch Safe Area */}
-      <header className="md:hidden flex items-center justify-between px-5 pt-safe pb-2.5 border-b border-border/60 ios-material sticky top-0 z-30">
-        <Link href="/dashboard" className="flex items-center gap-2 ios-touch">
-          <div className="h-7 w-7 rounded-lg bg-white flex items-center justify-center text-black">
-            <Zap className="h-4 w-4 fill-current" />
-          </div>
-          <div>
-            <div className="font-bold text-sm tracking-tight leading-tight">Ola Charge</div>
-            <div className="text-[10px] text-muted-foreground font-mono-num">{scooter?.name}</div>
-          </div>
-        </Link>
-        <span className="text-[11px] text-emerald-400 font-mono-num font-semibold border border-emerald-900/60 px-2 py-0.5 rounded bg-emerald-950/40">
-          {scooter?.batteryCapacity} kWh
-        </span>
-      </header>
-
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
-          {children}
-        </div>
-      </main>
-
-      {/* iOS 17 Floating Frosted Glass Tab Bar with Center Quick Add */}
-      <div className="md:hidden fixed bottom-3 left-3 right-3 z-40">
-        <nav className="ios-material rounded-2xl p-1.5 shadow-2xl shadow-black/80 flex items-center justify-around font-mono-num">
-          <Link
-            href="/dashboard"
-            className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all ios-touch ${
-              pathname === "/dashboard" ? "text-white font-bold" : "text-zinc-500"
-            }`}
-          >
-            <LayoutDashboard className="h-5 w-5" />
-            <span className="text-[9px] mt-0.5 uppercase tracking-wider">Dashboard</span>
-          </Link>
-
-          <Link
-            href="/history"
-            className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all ios-touch ${
-              pathname === "/history" ? "text-white font-bold" : "text-zinc-500"
-            }`}
-          >
-            <History className="h-5 w-5" />
-            <span className="text-[9px] mt-0.5 uppercase tracking-wider">History</span>
-          </Link>
-
-          {/* Center Elevated Action Button */}
-          <Link
-            href="/add-session"
-            className="flex items-center justify-center -my-3 ios-touch"
-          >
-            <div className="h-12 w-12 rounded-xl bg-white text-black flex items-center justify-center shadow-lg shadow-white/20 border-2 border-[#09090b]">
-              <Plus className="h-6 w-6 stroke-[2.5]" />
-            </div>
-          </Link>
-
-          <Link
-            href="/analytics"
-            className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all ios-touch ${
-              pathname === "/analytics" ? "text-white font-bold" : "text-zinc-500"
-            }`}
-          >
-            <TrendingUp className="h-5 w-5" />
-            <span className="text-[9px] mt-0.5 uppercase tracking-wider">Analytics</span>
-          </Link>
-
-          <Link
-            href="/settings"
-            className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all ios-touch ${
-              pathname === "/settings" ? "text-white font-bold" : "text-zinc-500"
-            }`}
-          >
-            <Settings className="h-5 w-5" />
-            <span className="text-[9px] mt-0.5 uppercase tracking-wider">Settings</span>
-          </Link>
-        </nav>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
 
