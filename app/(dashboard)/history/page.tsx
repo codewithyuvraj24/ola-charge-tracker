@@ -6,6 +6,7 @@ import { useScooter } from "@/lib/scooter-context";
 import {
   getChargingSessions,
   deleteChargingSession,
+  deleteChargingSessions,
   updateChargingSession,
 } from "@/lib/firestore";
 import { formatCurrency, formatNumber, formatDate } from "@/lib/utils";
@@ -41,6 +42,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { BatteryChargeLoader } from "@/components/ui/uiverse";
 import {
   Search,
@@ -88,8 +90,10 @@ export default function HistoryPage() {
   });
   const [savingEdit, setSavingEdit] = useState(false);
 
-  // Delete dialog state
+  // Delete dialog state (single or bulk)
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleteMode, setBulkDeleteMode] = useState<"selected" | "all" | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchSessions = async () => {
@@ -289,17 +293,65 @@ export default function HistoryPage() {
     }
   };
 
-  // Delete Session
+  // Delete Single Session
   const handleConfirmDelete = async () => {
     if (!user || !deletingId) return;
     setIsDeleting(true);
     try {
       await deleteChargingSession(user.uid, deletingId);
-      toast.success("Session deleted");
+      toast.success("Charging log deleted");
+      setSelectedIds((prev) => prev.filter((id) => id !== deletingId));
       setDeletingId(null);
       await fetchSessions();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to delete session";
+      toast.error(msg);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Toggle selection
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const allPageSelected =
+    paginatedSessions.length > 0 &&
+    paginatedSessions.every((s) => selectedIds.includes(s.id));
+
+  const toggleSelectPage = () => {
+    if (allPageSelected) {
+      const pageIds = new Set(paginatedSessions.map((s) => s.id));
+      setSelectedIds((prev) => prev.filter((id) => !pageIds.has(id)));
+    } else {
+      const merged = new Set([...selectedIds, ...paginatedSessions.map((s) => s.id)]);
+      setSelectedIds(Array.from(merged));
+    }
+  };
+
+  // Bulk delete selected or all sessions
+  const handleConfirmBulkDelete = async () => {
+    if (!user || !bulkDeleteMode) return;
+    const idsToDelete =
+      bulkDeleteMode === "all" ? sessions.map((s) => s.id) : selectedIds;
+    if (idsToDelete.length === 0) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteChargingSessions(user.uid, idsToDelete);
+      toast.success(
+        bulkDeleteMode === "all"
+          ? `Cleared all ${idsToDelete.length} charging logs`
+          : `Deleted ${idsToDelete.length} selected log${idsToDelete.length > 1 ? "s" : ""}`
+      );
+      setSelectedIds([]);
+      setBulkDeleteMode(null);
+      await fetchSessions();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to delete logs";
       toast.error(msg);
     } finally {
       setIsDeleting(false);
@@ -323,8 +375,19 @@ export default function HistoryPage() {
           </p>
         </div>
 
-        {/* Export Buttons */}
-        <div className="flex items-center gap-2">
+        {/* Export & Bulk Delete Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedIds.length > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteMode("selected")}
+              className="text-xs ios-touch"
+            >
+              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              Delete Selected ({selectedIds.length})
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -345,6 +408,17 @@ export default function HistoryPage() {
             <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5" />
             Excel
           </Button>
+          {sessions.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setBulkDeleteMode("all")}
+              className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10 ios-touch"
+            >
+              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              Clear All
+            </Button>
+          )}
         </div>
       </div>
 
@@ -409,6 +483,13 @@ export default function HistoryPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-b border-border/80">
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={allPageSelected}
+                          onCheckedChange={toggleSelectPage}
+                          aria-label="Select all logs on this page"
+                        />
+                      </TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Battery Range</TableHead>
                       <TableHead>Added</TableHead>
@@ -423,7 +504,19 @@ export default function HistoryPage() {
                   </TableHeader>
                   <TableBody>
                     {paginatedSessions.map((s) => (
-                      <TableRow key={s.id} className="hover:bg-muted/40">
+                      <TableRow
+                        key={s.id}
+                        className={`hover:bg-muted/40 ${
+                          selectedIds.includes(s.id) ? "bg-primary/5" : ""
+                        }`}
+                      >
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedIds.includes(s.id)}
+                            onCheckedChange={() => toggleSelect(s.id)}
+                            aria-label={`Select log from ${formatDate(s.date.toDate())}`}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium text-xs whitespace-nowrap">
                           {formatDate(s.date.toDate())}
                         </TableCell>
@@ -482,9 +575,19 @@ export default function HistoryPage() {
               {/* Mobile Card View */}
               <div className="md:hidden divide-y divide-border/60">
                 {paginatedSessions.map((s) => (
-                  <div key={s.id} className="p-4 space-y-3">
+                  <div
+                    key={s.id}
+                    className={`p-4 space-y-3 ${
+                      selectedIds.includes(s.id) ? "bg-primary/5" : ""
+                    }`}
+                  >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <Checkbox
+                          checked={selectedIds.includes(s.id)}
+                          onCheckedChange={() => toggleSelect(s.id)}
+                          aria-label={`Select log from ${formatDate(s.date.toDate())}`}
+                        />
                         <span className="font-semibold text-sm">
                           {formatDate(s.date.toDate())}
                         </span>
@@ -705,7 +808,7 @@ export default function HistoryPage() {
       </Dialog>
 
       {/* Delete Confirmation Alert Dialog */}
-      <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
+      <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && !isDeleting && setDeletingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Charging Session?</AlertDialogTitle>
@@ -718,9 +821,44 @@ export default function HistoryPage() {
             <AlertDialogAction
               onClick={handleConfirmDelete}
               disabled={isDeleting}
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? "Deleting..." : "Delete Permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk / Clear All Delete Confirmation Dialog */}
+      <AlertDialog
+        open={!!bulkDeleteMode}
+        onOpenChange={(open) => !open && !isDeleting && setBulkDeleteMode(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {bulkDeleteMode === "all"
+                ? `Clear All ${sessions.length} Charging Logs?`
+                : `Delete ${selectedIds.length} Selected Log${selectedIds.length > 1 ? "s" : ""}?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {bulkDeleteMode === "all"
+                ? "This will permanently delete every charging record in your ledger. Your scooter specs and profile will remain intact."
+                : "The selected charging records and their energy cost metrics will be permanently deleted."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmBulkDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting
+                ? "Deleting..."
+                : bulkDeleteMode === "all"
+                ? "Clear All Logs"
+                : "Delete Selected"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

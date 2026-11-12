@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useScooter } from "@/lib/scooter-context";
-import { getChargingSessions, addChargingSession } from "@/lib/firestore";
+import { getChargingSessions, addChargingSession, deleteChargingSession } from "@/lib/firestore";
 import {
   computeDashboardStats,
   computeSessionChartData,
@@ -34,6 +34,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
@@ -47,6 +57,7 @@ import {
   Gauge,
   BatteryCharging,
   TrendingDown,
+  Trash2,
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
@@ -72,6 +83,8 @@ export default function DashboardPage() {
   const [gaugeStart, setGaugeStart] = useState<number>(20);
   const [gaugeEnd, setGaugeEnd] = useState<number>(100);
   const [loggingQuick, setLoggingQuick] = useState(false);
+  const [deletingSession, setDeletingSession] = useState<ChargingSession | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchSessions = async () => {
     if (!user) return;
@@ -132,6 +145,22 @@ export default function DashboardPage() {
       toast.error(msg);
     } finally {
       setLoggingQuick(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!user || !deletingSession) return;
+    setIsDeleting(true);
+    try {
+      await deleteChargingSession(user.uid, deletingSession.id);
+      setSessions((prev) => prev.filter((item) => item.id !== deletingSession.id));
+      toast.success("Charging log deleted");
+      setDeletingSession(null);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to delete log";
+      toast.error(msg);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -426,6 +455,7 @@ export default function DashboardPage() {
                   <TableHead className="hidden sm:table-cell text-xs">Location</TableHead>
                   <TableHead className="text-right text-xs">Units</TableHead>
                   <TableHead className="text-right text-xs">Cost</TableHead>
+                  <TableHead className="w-[52px] text-right text-xs">Del</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -449,6 +479,19 @@ export default function DashboardPage() {
                     <TableCell className="text-right text-xs font-mono-num font-semibold">
                       {formatCurrency(s.totalCost)}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 ios-touch"
+                        onClick={() => setDeletingSession(s)}
+                        title="Delete charging log"
+                        aria-label="Delete charging log"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -456,6 +499,33 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={!!deletingSession}
+        onOpenChange={(open) => !open && !isDeleting && setDeletingSession(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Charging Log?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deletingSession
+                ? `Remove the ${formatDate(deletingSession.date.toDate())} session (+${deletingSession.addedPercentage}%, ${formatCurrency(deletingSession.totalCost)}) permanently? Your dashboard metrics will update automatically.`
+                : "This action cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete Log"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

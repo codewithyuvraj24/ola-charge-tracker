@@ -10,6 +10,7 @@ import {
   orderBy,
   where,
   Timestamp,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import type { Scooter, ChargingSession, ScooterFormData, SessionFormData, UserProfile } from "./types";
@@ -184,6 +185,24 @@ export async function deleteChargingSession(
   sessionId: string
 ): Promise<void> {
   await deleteDoc(doc(db, "users", userId, "chargingSessions", sessionId));
+}
+
+export async function deleteChargingSessions(
+  userId: string,
+  sessionIds: string[]
+): Promise<void> {
+  if (sessionIds.length === 0) return;
+
+  // Firestore writeBatch supports up to 500 operations per batch
+  const chunkSize = 450;
+  for (let i = 0; i < sessionIds.length; i += chunkSize) {
+    const batch = writeBatch(db);
+    const chunk = sessionIds.slice(i, i + chunkSize);
+    for (const id of chunk) {
+      batch.delete(doc(db, "users", userId, "chargingSessions", id));
+    }
+    await batch.commit();
+  }
 }
 
 export async function completeOnboarding(
