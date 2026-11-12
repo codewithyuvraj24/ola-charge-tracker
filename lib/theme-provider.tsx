@@ -2,7 +2,9 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-export type AppTheme = "emerald" | "cyberpunk" | "stealth" | "solar" | "light";
+export type AppTheme = "cobalt" | "daylight" | "amber" | "mint" | "crimson";
+
+export const APP_THEMES: AppTheme[] = ["cobalt", "daylight", "amber", "mint", "crimson"];
 
 interface ThemeContextType {
   theme: AppTheme;
@@ -15,7 +17,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 function applyThemeToDocument(t: AppTheme) {
   const root = document.documentElement;
   root.setAttribute("data-theme", t);
-  if (t === "light") {
+  if (t === "daylight") {
     root.classList.remove("dark");
   } else {
     root.classList.add("dark");
@@ -24,7 +26,7 @@ function applyThemeToDocument(t: AppTheme) {
 
 export function ThemeProvider({
   children,
-  defaultTheme = "emerald",
+  defaultTheme = "cobalt",
 }: {
   children: ReactNode;
   defaultTheme?: AppTheme;
@@ -32,15 +34,15 @@ export function ThemeProvider({
   const [theme, setThemeState] = useState<AppTheme>(defaultTheme);
 
   useEffect(() => {
-    const stored = localStorage.getItem("app_theme") as AppTheme | null;
-    const active = stored || defaultTheme;
+    const stored = localStorage.getItem("app_theme_v2") as AppTheme | null;
+    const active = stored && APP_THEMES.includes(stored) ? stored : defaultTheme;
     setThemeState(active);
     applyThemeToDocument(active);
   }, [defaultTheme]);
 
   const setTheme = (newTheme: AppTheme) => {
     setThemeState(newTheme);
-    localStorage.setItem("app_theme", newTheme);
+    localStorage.setItem("app_theme_v2", newTheme);
     applyThemeToDocument(newTheme);
   };
 
@@ -49,7 +51,7 @@ export function ThemeProvider({
       value={{
         theme,
         setTheme,
-        resolvedTheme: theme === "light" ? "light" : "dark",
+        resolvedTheme: theme === "daylight" ? "light" : "dark",
       }}
     >
       {children}

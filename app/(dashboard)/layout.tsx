@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ScooterProvider, useScooter } from "@/lib/scooter-context";
-import { useTheme, type AppTheme } from "@/lib/theme-provider";
+import { useTheme, APP_THEMES } from "@/lib/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -93,9 +93,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     .slice(0, 2);
 
   const cycleTheme = () => {
-    const list: AppTheme[] = ["emerald", "cyberpunk", "stealth", "solar", "light"];
-    const idx = list.indexOf(theme);
-    setTheme(list[(idx + 1) % list.length]);
+    const idx = APP_THEMES.indexOf(theme);
+    setTheme(APP_THEMES[(idx + 1) % APP_THEMES.length]);
   };
 
   return (

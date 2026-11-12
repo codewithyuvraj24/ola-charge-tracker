@@ -4,8 +4,8 @@
   "description": "Private local electric scooter charging tracker",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0b1220",
-  "theme_color": "#0b1220",
+  "background_color": "#0a0e17",
+  "theme_color": "#0a0e17",
   "icons": [
     {
       "src": "/icon.svg",

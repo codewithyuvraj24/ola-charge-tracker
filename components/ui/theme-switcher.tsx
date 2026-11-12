@@ -16,44 +16,44 @@ export function ThemePreviewSwitcher() {
     bgColor: string;
   }[] = [
     {
-      id: "emerald",
-      name: "EV Emerald",
-      subtitle: "Deep Zinc + Clean Electric Green (Default)",
+      id: "cobalt",
+      name: "Midnight Cobalt",
+      subtitle: "Deep Graphite + Electric Cobalt Blue (Default)",
       icon: Sparkles,
-      accentColor: "#22C55E",
-      bgColor: "#09090B",
+      accentColor: "#3B82F6",
+      bgColor: "#0A0E17",
     },
     {
-      id: "cyberpunk",
-      name: "Hyper-Volt",
-      subtitle: "Obsidian + Neon Lime (Ola MoveOS Hyper)",
-      icon: Zap,
-      accentColor: "#CCFF00",
-      bgColor: "#08080A",
-    },
-    {
-      id: "stealth",
-      name: "Stealth Titanium",
-      subtitle: "Space Slate + Crisp Ice Cyan",
-      icon: Shield,
-      accentColor: "#38BDF8",
-      bgColor: "#0F1218",
-    },
-    {
-      id: "solar",
-      name: "Solar Sunset",
-      subtitle: "Espresso Black + Warm Flame Amber",
-      icon: Flame,
-      accentColor: "#F97316",
-      bgColor: "#100B09",
-    },
-    {
-      id: "light",
-      name: "Nordic Daylight",
-      subtitle: "Crisp White + Racing Green",
+      id: "daylight",
+      name: "iOS Porcelain",
+      subtitle: "Crisp White + Apple System Blue",
       icon: Sun,
-      accentColor: "#16A34A",
-      bgColor: "#FFFFFF",
+      accentColor: "#2563EB",
+      bgColor: "#F8FAFC",
+    },
+    {
+      id: "amber",
+      name: "Titanium Amber",
+      subtitle: "Warm Gunmetal + Precision Copper Gold",
+      icon: Flame,
+      accentColor: "#F59E0B",
+      bgColor: "#110E0D",
+    },
+    {
+      id: "mint",
+      name: "Alpine Mint",
+      subtitle: "Forest Slate + Muted Telemetry Mint",
+      icon: Shield,
+      accentColor: "#25C293",
+      bgColor: "#0A1211",
+    },
+    {
+      id: "crimson",
+      name: "Track Rosso",
+      subtitle: "Carbon Asphalt + Motorsport Crimson",
+      icon: Zap,
+      accentColor: "#EB3349",
+      bgColor: "#0E0E0E",
     },
   ];
 
@@ -73,7 +73,6 @@ export function ThemePreviewSwitcher() {
                 : "border-border hover:border-foreground/25 bg-card"
             }`}
           >
-            {/* Color swatch preview */}
             <div
               className="h-10 w-10 rounded-md flex items-center justify-center shrink-0 border border-border shadow-sm"
               style={{ backgroundColor: t.bgColor }}
@@ -102,4 +101,3 @@ export function ThemePreviewSwitcher() {
     </div>
   );
 }
-

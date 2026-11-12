@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { useTheme, type AppTheme } from "@/lib/theme-provider";
+import { useTheme, APP_THEMES } from "@/lib/theme-provider";
 import { calculateSession } from "@/lib/calculations";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { VisualBatteryGauge } from "@/components/ui/battery-gauge";
@@ -66,9 +66,8 @@ export default function LandingPage() {
   }, [calcStart, calcEnd, calcCap, calcRate, activeLoss]);
 
   const cycleTheme = () => {
-    const list: AppTheme[] = ["emerald", "cyberpunk", "stealth", "solar", "light"];
-    const idx = list.indexOf(theme);
-    setTheme(list[(idx + 1) % list.length]);
+    const idx = APP_THEMES.indexOf(theme);
+    setTheme(APP_THEMES[(idx + 1) % APP_THEMES.length]);
   };
 
   // Illustrative per-km math at ~32 km real-world range per kWh stored

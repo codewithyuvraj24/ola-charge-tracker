@@ -3,137 +3,147 @@
 @tailwind utilities;
 
 @layer base {
-  /* Light Theme (shadcn/ui default tokens + EV emerald accent) */
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+  /* Light Theme — iOS Porcelain & Crisp Cobalt */
+  :root,
+  [data-theme="daylight"] {
+    --background: 210 25% 98%;
+    --foreground: 222 35% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 222 35% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 152 68% 36%;
+    --popover-foreground: 222 35% 10%;
+    --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
+    --secondary: 214 24% 94%;
+    --secondary-foreground: 222 30% 16%;
+    --muted: 214 24% 94%;
+    --muted-foreground: 215 16% 45%;
+    --accent: 214 24% 92%;
+    --accent-foreground: 222 30% 14%;
+    --destructive: 0 84% 58%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 152 68% 36%;
+    --border: 214 20% 89%;
+    --input: 214 20% 89%;
+    --ring: 221 83% 53%;
     --radius: 0.625rem;
-    --chart-1: 152 68% 38%;
-    --chart-2: 199 89% 48%;
-    --chart-3: 43 74% 49%;
-    --chart-4: 262 83% 58%;
-    --chart-5: 346 84% 56%;
+    --chart-1: 221 83% 53%;
+    --chart-2: 174 72% 40%;
+    --chart-3: 32 95% 48%;
+    --chart-4: 258 80% 58%;
+    --chart-5: 350 84% 56%;
   }
 
-  /* Default Dark Mode (shadcn/ui zinc/slate + EV emerald) */
+  /* Default Dark Palette — Midnight Cobalt (Deep Graphite + Electric Blue) */
   .dark,
-  [data-theme="emerald"] {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 5.5%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 5.5%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 152 69% 45%;
-    --primary-foreground: 240 10% 3.9%;
-    --secondary: 240 3.7% 13.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 13.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 45%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 152 69% 45%;
-    --chart-1: 152 69% 45%;
-    --chart-2: 199 89% 52%;
-    --chart-3: 42 96% 56%;
-    --chart-4: 262 83% 62%;
-    --chart-5: 346 84% 60%;
-  }
-
-  [data-theme="cyberpunk"] {
-    --background: 240 10% 3%;
-    --foreground: 0 0% 98%;
-    --card: 240 8% 6.5%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 8% 6.5%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 74 100% 50%;
-    --primary-foreground: 0 0% 0%;
-    --secondary: 240 6% 12%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 6% 12%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 240 6% 15%;
-    --accent-foreground: 0 0% 98%;
-    --border: 240 6% 16%;
-    --input: 240 6% 16%;
-    --ring: 74 100% 50%;
-    --chart-1: 74 100% 50%;
-    --chart-2: 187 100% 50%;
-    --chart-3: 42 96% 56%;
-    --chart-4: 262 83% 62%;
-    --chart-5: 346 84% 60%;
-  }
-
-  [data-theme="stealth"] {
-    --background: 220 15% 7%;
-    --foreground: 210 20% 98%;
-    --card: 220 14% 10%;
-    --card-foreground: 210 20% 98%;
-    --popover: 220 14% 10%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 199 89% 52%;
-    --primary-foreground: 220 20% 6%;
-    --secondary: 220 12% 15%;
-    --secondary-foreground: 210 20% 98%;
-    --muted: 220 12% 15%;
-    --muted-foreground: 220 10% 64%;
-    --accent: 220 12% 18%;
-    --accent-foreground: 210 20% 98%;
-    --border: 220 12% 18%;
-    --input: 220 12% 18%;
-    --ring: 199 89% 52%;
-    --chart-1: 199 89% 52%;
-    --chart-2: 152 69% 45%;
-    --chart-3: 42 96% 56%;
-    --chart-4: 262 83% 62%;
-    --chart-5: 346 84% 60%;
-  }
-
-  [data-theme="solar"] {
-    --background: 20 20% 5%;
-    --foreground: 30 20% 98%;
-    --card: 20 16% 8.5%;
-    --card-foreground: 30 20% 98%;
-    --popover: 20 16% 8.5%;
-    --popover-foreground: 30 20% 98%;
-    --primary: 24 95% 53%;
+  [data-theme="cobalt"] {
+    --background: 222 32% 6%;
+    --foreground: 210 30% 97%;
+    --card: 222 26% 9.5%;
+    --card-foreground: 210 30% 97%;
+    --popover: 222 26% 9.5%;
+    --popover-foreground: 210 30% 97%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 20 14% 14%;
-    --secondary-foreground: 30 20% 98%;
-    --muted: 20 14% 14%;
-    --muted-foreground: 25 15% 65%;
-    --accent: 20 14% 17%;
-    --accent-foreground: 30 20% 98%;
-    --border: 20 15% 16%;
-    --input: 20 15% 16%;
-    --ring: 24 95% 53%;
-    --chart-1: 24 95% 53%;
-    --chart-2: 38 92% 50%;
-    --chart-3: 152 69% 45%;
-    --chart-4: 262 83% 62%;
-    --chart-5: 346 84% 60%;
+    --secondary: 222 20% 14.5%;
+    --secondary-foreground: 210 30% 96%;
+    --muted: 222 20% 14.5%;
+    --muted-foreground: 215 16% 64%;
+    --accent: 222 20% 17.5%;
+    --accent-foreground: 210 30% 98%;
+    --destructive: 0 72% 52%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 222 18% 18%;
+    --input: 222 18% 18%;
+    --ring: 217 91% 60%;
+    --chart-1: 217 91% 60%;
+    --chart-2: 174 72% 48%;
+    --chart-3: 38 92% 55%;
+    --chart-4: 252 85% 66%;
+    --chart-5: 350 84% 60%;
+  }
+
+  /* Titanium Amber (Gunmetal + Precision Gold) */
+  [data-theme="amber"] {
+    --background: 24 14% 6%;
+    --foreground: 36 25% 97%;
+    --card: 24 12% 9.5%;
+    --card-foreground: 36 25% 97%;
+    --popover: 24 12% 9.5%;
+    --popover-foreground: 36 25% 97%;
+    --primary: 34 95% 53%;
+    --primary-foreground: 24 20% 6%;
+    --secondary: 24 10% 14.5%;
+    --secondary-foreground: 36 25% 96%;
+    --muted: 24 10% 14.5%;
+    --muted-foreground: 30 12% 64%;
+    --accent: 24 10% 17.5%;
+    --accent-foreground: 36 25% 98%;
+    --destructive: 0 72% 52%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 24 10% 18%;
+    --input: 24 10% 18%;
+    --ring: 34 95% 53%;
+    --chart-1: 34 95% 53%;
+    --chart-2: 199 89% 54%;
+    --chart-3: 162 68% 46%;
+    --chart-4: 262 83% 65%;
+    --chart-5: 350 84% 60%;
+  }
+
+  /* Alpine Mint (Forest Slate + Calm Mint) */
+  [data-theme="mint"] {
+    --background: 172 28% 5.5%;
+    --foreground: 165 25% 97%;
+    --card: 172 22% 9%;
+    --card-foreground: 165 25% 97%;
+    --popover: 172 22% 9%;
+    --popover-foreground: 165 25% 97%;
+    --primary: 162 68% 46%;
+    --primary-foreground: 172 30% 6%;
+    --secondary: 172 18% 14%;
+    --secondary-foreground: 165 25% 96%;
+    --muted: 172 18% 14%;
+    --muted-foreground: 168 12% 63%;
+    --accent: 172 18% 17%;
+    --accent-foreground: 165 25% 98%;
+    --destructive: 0 72% 52%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 172 16% 17.5%;
+    --input: 172 16% 17.5%;
+    --ring: 162 68% 46%;
+    --chart-1: 162 68% 46%;
+    --chart-2: 204 88% 56%;
+    --chart-3: 38 92% 56%;
+    --chart-4: 262 83% 64%;
+    --chart-5: 350 84% 60%;
+  }
+
+  /* Track Rosso (Carbon Asphalt + Motorsport Crimson) */
+  [data-theme="crimson"] {
+    --background: 0 0% 5.5%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 352 82% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 0 0% 17%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 52%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 17.5%;
+    --input: 0 0% 17.5%;
+    --ring: 352 82% 56%;
+    --chart-1: 352 82% 56%;
+    --chart-2: 217 91% 60%;
+    --chart-3: 38 92% 56%;
+    --chart-4: 162 68% 46%;
+    --chart-5: 262 83% 64%;
   }
 }
 

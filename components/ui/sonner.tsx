@@ -4,12 +4,11 @@ import { useTheme } from "@/lib/theme-provider";
 import { Toaster as SonnerToaster } from "sonner";
 
 export function Toaster() {
-  const { theme } = useTheme();
-  const sonnerTheme = theme === "light" ? "light" : "dark";
+  const { resolvedTheme } = useTheme();
 
   return (
     <SonnerToaster
-      theme={sonnerTheme}
+      theme={resolvedTheme}
       className="toaster group"
       toastOptions={{
         classNames: {
