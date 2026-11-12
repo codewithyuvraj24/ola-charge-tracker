@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useScooter } from "@/lib/scooter-context";
@@ -113,7 +113,7 @@ export default function DashboardPage() {
 
   const activeQuickRate = quickRate ?? scooter?.electricityRate ?? 12;
 
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     if (!user) return;
     try {
       setLoading(true);
@@ -152,11 +152,11 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, dateFilter, customStart, customEnd, activeFilterScooterId, monthlyBudget]);
 
   useEffect(() => {
     fetchSessions();
-  }, [user, dateFilter, customStart, customEnd, activeFilterScooterId, monthlyBudget]);
+  }, [fetchSessions]);
 
   const stats = useMemo(() => computeDashboardStats(sessions), [sessions]);
   const sessionChartData = useMemo(() => computeSessionChartData(sessions), [sessions]);

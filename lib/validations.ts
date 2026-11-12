@@ -30,8 +30,8 @@ export const scooterSchema = z.object({
     .max(100, "Battery capacity seems too high"),
   electricityRate: z
     .number({ invalid_type_error: "Electricity rate is required" })
-    .positive("Rate must be positive")
-    .max(100, "Rate seems too high"),
+    .min(0, "Rate cannot be negative")
+    .max(200, "Rate seems too high"),
   chargingLoss: z
     .number({ invalid_type_error: "Charging loss is required" })
     .min(0, "Loss cannot be negative")
@@ -57,7 +57,7 @@ export const sessionSchema = z
       .max(100, "Must be 100 or below"),
     electricityRate: z
       .number({ invalid_type_error: "Electricity rate is required" })
-      .positive("Rate must be positive"),
+      .min(0, "Rate cannot be negative"),
     startOdometer: z.number().nonnegative().optional().or(z.literal("")),
     endOdometer: z.number().nonnegative().optional().or(z.literal("")),
     location: z.string().optional(),

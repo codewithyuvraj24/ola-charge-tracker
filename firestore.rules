@@ -3,18 +3,43 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
     // Users can only read/write their own profile
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId);
 
-      // Scooters subcollection
+      // Scooters subcollection with basic numeric range guards
       match /scooters/{scooterId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && request.resource.data.batteryCapacity is number
+          && request.resource.data.batteryCapacity > 0
+          && request.resource.data.batteryCapacity <= 100
+          && request.resource.data.electricityRate is number
+          && request.resource.data.electricityRate >= 0
+          && request.resource.data.electricityRate <= 200
+          && request.resource.data.chargingLoss is number
+          && request.resource.data.chargingLoss >= 0
+          && request.resource.data.chargingLoss <= 50;
       }
 
-      // Charging sessions subcollection
+      // Charging sessions subcollection with SoC & cost guards
       match /chargingSessions/{sessionId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && request.resource.data.startPercentage is number
+          && request.resource.data.endPercentage is number
+          && request.resource.data.startPercentage >= 0
+          && request.resource.data.endPercentage <= 100
+          && request.resource.data.endPercentage > request.resource.data.startPercentage
+          && request.resource.data.electricityRate is number
+          && request.resource.data.electricityRate >= 0
+          && request.resource.data.totalCost is number
+          && request.resource.data.totalCost >= 0;
       }
     }
 
@@ -24,4 +49,3 @@ service cloud.firestore {
     }
   }
 }
-

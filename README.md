@@ -1,63 +1,56 @@
 # ⚡ Ola Charge Tracker
 
-A production-ready, full-stack electric vehicle (EV) charging and electricity cost management platform built with **Next.js 14 (App Router)**, **TypeScript**, **Tailwind CSS**, **shadcn/ui**, and **Firebase (Auth & Firestore)**.
+A full-stack, multi-vehicle electric scooter (EV) charging and electricity cost tracker built with **Next.js 14 (App Router)**, **TypeScript**, **Tailwind CSS**, **shadcn/ui**, **Motion**, and **Firebase (Auth & Firestore with offline cache)**.
 
-Designed specifically for Ola Electric scooter owners (Ola S1 Pro, S1 Air, S1 X, Roadster) and other electric two-wheeler riders to track charging sessions, grid electricity consumption, true operational costs, and long-term battery performance.
+Designed for Ola Electric scooter riders (S1 Pro, S1 Air, S1 X, Roadster) and other EV two-wheeler owners to measure wall-to-battery energy consumption, tariff costs across home/public chargers, monthly budgets, and real EV-vs-petrol savings.
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
-- **Private & Multi-User Architecture**: Every user registers and accesses their own isolated charging diary and scooter specs via Firebase Authentication and Firestore Security Rules.
-- **EV Calculation Engine**:
-  - Automatically accounts for thermal and converter charging losses (default 10%).
+- **Private Multi-User & Multi-Vehicle Garage**: Isolated Firebase Authentication + Cloud Firestore storage with per-user security rules, multiple scooters per account, vehicle switcher, and an aggregated **All Vehicles** view.
+- **Wall-to-Battery Telemetry Engine**:
+  - Accounts for AC/DC converter and thermal charging loss (default `10%`).
   - Formulas:
-    $$\text{Battery Stored (kWh)} = \frac{\text{Ending \%} - \text{Starting \%}}{100} \times \text{Battery Capacity}$$
+    $$\text{Battery Stored (kWh)} = \frac{\text{End \%} - \text{Start \%}}{100} \times \text{Battery Capacity}$$
     $$\text{Grid Units (kWh)} = \frac{\text{Battery Stored}}{1 - \frac{\text{Charging Loss \%}}{100}}$$
-    $$\text{Charging Cost (₹)} = \text{Grid Units} \times \text{Electricity Rate}$$
-    $$\text{Cost Per Kilometre} = \frac{\text{Total Cost}}{\text{Distance Travelled}}$$
-- **Live Preview Before Saving**: Real-time cost and units estimation as you type or slide battery percentages.
-- **Interactive Dashboard**:
-  - 7 KPI summary cards (Expenditure, Grid Units, Sessions, Average Cost, Average Added %, Distance, Cost/km).
-  - Timeframe filtering: Last 7 days, 30 days, 3 months, 6 months, This year, All time.
-  - Interactive Recharts for session costs and grid electricity consumption.
-- **History & Records**:
-  - Search, filter, and sort by date or cost.
-  - Edit and delete charging records.
-  - Export to **CSV** and **Excel (.xlsx)** with one click.
-  - Responsive layout (data table on desktop, cards on mobile).
-- **Analytics & Intelligence**:
-  - Monthly spending and electricity trends.
-  - Smart insight benchmarks (e.g. *"Your average charging cost this month is ₹X"*).
-  - Highest and lowest cost sessions.
-- **PWA Ready**:
-  - Web app manifest and service worker included for native-like installation on mobile and desktop.
-- **Theme Support**:
-  - Dark Navy & Electric Green theme, Light theme, and System theme.
+    $$\text{Charging Cost} = \text{Grid Units} \times \text{Electricity Rate}$$
+- **Interactive Battery Gauge & 1-Tap Quick Log**: Slide SoC percentages live, switch between custom Tariff Presets (*Home Plug*, *Office Free*, *Hypercharger*), and log directly from the Dashboard.
+- **Budget & EV-vs-Petrol Economics**: Monthly charging budget progress bar, configurable fuel baseline (`petrolPrice` / `petrolMileage`), real-world efficiency (`km/kWh` & `Wh/km`), equivalent battery cycles, and spend breakdown by charging location.
+- **Full History, Bulk Actions & Data Portability**: Search, sort, custom date-range filtering, inline edit/delete, multi-select bulk delete, **CSV Import**, and 1-click **CSV / Excel (`.xlsx`) Export**.
+- **5 Built-in App Themes (Zero Flash)**: *Midnight Cobalt* (default), *iOS Porcelain*, *Titanium Amber*, *Alpine Mint*, and *Track Rosso*.
+- **PWA & Offline Garage Persistence**: Installable on iOS Safari & Android (`apple-touch-icon.png`, `192x192`, `512x512`) with Firestore local persistence for basements/garages.
 
 ---
 
-## 🛠️ Technology Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| **Framework** | Next.js 14+ (App Router, Server & Client Components) |
-| **Language** | TypeScript |
-| **Styling** | Tailwind CSS + Custom EV Color Palette |
-| **UI Components** | Radix UI + Custom Accessible Components |
-| **Icons** | Lucide React |
-| **Charts** | Recharts |
-| **Authentication** | Firebase Authentication (Email/Password & Google Sign-In) |
-| **Database** | Google Cloud Firestore (NoSQL) |
-| **Spreadsheet Export** | SheetJS (xlsx) |
+| **Framework** | Next.js 14 (App Router, TypeScript) |
+| **UI & Styling** | Tailwind CSS, `shadcn/ui` (Radix UI), Motion, Lucide React |
+| **Charts** | Recharts (`ChartContainer`) |
+| **Auth & DB** | Firebase Auth + Cloud Firestore (persistent multi-tab local cache) |
+| **Import / Export** | SheetJS (`xlsx`) + RFC-4180 CSV parser |
 | **Notifications** | Sonner |
-| **PWA** | Manifest v2 + Service Worker |
 
 ---
 
-## ⚙️ Environment Variables
+## Development & Verification Scripts
 
-Create a `.env.local` file in the root directory:
+```bash
+npm run dev        # Start local Next.js dev server
+npm run lint       # Run ESLint (next/core-web-vitals)
+npm run typecheck  # Run TypeScript compiler checks
+npm test           # Run unit tests (node --test)
+npm run build      # Create production bundle
+```
+
+---
+
+## Environment Variables
+
+Copy `.env.example` to `.env.local` and set your Firebase Web SDK keys:
 
 ```env
 NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
@@ -68,52 +61,4 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
 NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
 ```
 
----
-
-## 🔒 Firestore Security Rules
-
-Deploy the rules from `firestore.rules` to your Firebase project:
-
-```javascript
-rules_version = '2';
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-
-      match /scooters/{scooterId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-
-      match /chargingSessions/{sessionId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-    }
-
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-}
-```
-
----
-
-## 🚢 Vercel Deployment
-
-1. Push this repository to GitHub, GitLab, or Bitbucket.
-2. Go to [vercel.com](https://vercel.com) and click **"Add New Project"**.
-3. Import your repository.
-4. In the **Environment Variables** section, add all `NEXT_PUBLIC_FIREBASE_*` variables from your `.env.local`.
-5. Click **Deploy**. Vercel will build and assign an SSL-enabled production domain.
-
----
-
-## 🛵 Default Configuration Presets
-
-Pre-configured defaults for the **Ola S1 Pro Gen 2**:
-- **Battery Capacity**: 4.0 kWh
-- **Electricity Rate**: ₹12.00 / unit (kWh)
-- **Charging Loss**: 10%
-- Modifying settings in the app saves to new sessions while strictly preserving historical calculation inputs.
+Deploy `firestore.rules` to your Firebase project so owner-only authentication and numeric bounds validation are enforced server-side.

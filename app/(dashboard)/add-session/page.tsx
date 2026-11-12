@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useScooter } from "@/lib/scooter-context";
 import { addChargingSession, getChargingSessions } from "@/lib/firestore";
 import { calculateSession } from "@/lib/calculations";
+import { toLocalDateInputValue, parseLocalDateInput } from "@/lib/utils";
 import { DEFAULT_TARIFF_PRESETS } from "@/lib/types";
 import { VisualBatteryGauge } from "@/components/ui/battery-gauge";
 import { ChargePulseButton } from "@/components/ui/uiverse";
@@ -34,7 +35,7 @@ export default function AddSessionPage() {
     ? userProfile.tariffPresets
     : DEFAULT_TARIFF_PRESETS;
 
-  const [dateStr, setDateStr] = useState(new Date().toISOString().split("T")[0]);
+  const [dateStr, setDateStr] = useState(() => toLocalDateInputValue());
   const [startPct, setStartPct] = useState<number>(20);
   const [endPct, setEndPct] = useState<number>(100);
   const [rate, setRate] = useState<number>(scooter?.electricityRate || 12);
@@ -51,25 +52,29 @@ export default function AddSessionPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // Sync scooter tariff & smart odometer auto-fill from latest session
+  const activeScooterId = scooter?.id;
+  const activeScooterRate = scooter?.electricityRate;
+  const activeScooterOdometer = scooter?.currentOdometer;
+
   useEffect(() => {
-    if (scooter) {
-      setRate(scooter.electricityRate);
-      if (scooter.currentOdometer && !startOdo) {
-        setStartOdo(String(scooter.currentOdometer));
-        setLastOdoHint(scooter.currentOdometer);
-      }
+    if (activeScooterRate !== undefined) {
+      setRate(activeScooterRate);
     }
-  }, [scooter]);
+    if (activeScooterOdometer) {
+      setStartOdo((prev) => prev || String(activeScooterOdometer));
+      setLastOdoHint(activeScooterOdometer);
+    }
+  }, [activeScooterId, activeScooterRate, activeScooterOdometer]);
 
   useEffect(() => {
     async function loadLatestOdo() {
-      if (!user || !scooter) return;
+      if (!user || !activeScooterId) return;
       try {
-        const list = await getChargingSessions(user.uid, undefined, undefined, scooter.id);
+        const list = await getChargingSessions(user.uid, undefined, undefined, activeScooterId);
         const withOdo = list.find((s) => typeof s.endOdometer === "number" && s.endOdometer > 0);
-        const bestOdo = withOdo?.endOdometer ?? scooter.currentOdometer ?? null;
-        if (bestOdo && !startOdo) {
-          setStartOdo(String(bestOdo));
+        const bestOdo = withOdo?.endOdometer ?? activeScooterOdometer ?? null;
+        if (bestOdo) {
+          setStartOdo((prev) => prev || String(bestOdo));
         }
         setLastOdoHint(bestOdo);
       } catch {
@@ -77,7 +82,7 @@ export default function AddSessionPage() {
       }
     }
     loadLatestOdo();
-  }, [user, scooter?.id]);
+  }, [user, activeScooterId, activeScooterOdometer]);
 
   const calc = useMemo(() => {
     const sPct = Number(startPct) || 0;
@@ -115,7 +120,7 @@ export default function AddSessionPage() {
       await addChargingSession(
         user.uid,
         {
-          date: new Date(dateStr),
+          date: parseLocalDateInput(dateStr),
           startPercentage: startPct,
           endPercentage: endPct,
           electricityRate: rate,

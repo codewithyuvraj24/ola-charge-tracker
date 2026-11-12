@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "./auth-context";
 import { getScooters } from "./firestore";
 import type { Scooter } from "./types";
@@ -25,7 +25,7 @@ export function ScooterProvider({ children }: { children: ReactNode }) {
   const [loadingScooter, setLoadingScooter] = useState(true);
   const [viewAllVehicles, setViewAllVehicles] = useState(false);
 
-  const fetchScooters = async () => {
+  const fetchScooters = useCallback(async () => {
     if (!user) {
       setScooter(null);
       setScooters([]);
@@ -47,11 +47,11 @@ export function ScooterProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoadingScooter(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchScooters();
-  }, [user]);
+  }, [fetchScooters]);
 
   const setSelectedScooterId = (id: string) => {
     const found = scooters.find((s) => s.id === id);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useScooter } from "@/lib/scooter-context";
 import {
@@ -107,7 +107,7 @@ export default function HistoryPage() {
   const [bulkDeleteMode, setBulkDeleteMode] = useState<"selected" | "all" | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     if (!user) return;
     try {
       setLoading(true);
@@ -124,11 +124,11 @@ export default function HistoryPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, activeFilterScooterId]);
 
   useEffect(() => {
     fetchSessions();
-  }, [user, activeFilterScooterId]);
+  }, [fetchSessions]);
 
   // Filter & Sort
   const filteredSessions = useMemo(() => {
