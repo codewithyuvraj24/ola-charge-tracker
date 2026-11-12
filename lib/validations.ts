@@ -68,9 +68,3 @@ export const sessionSchema = z
     path: ["endPercentage"],
   });
 
-export type LoginFormData = z.infer<typeof loginSchema>;
-export type RegisterFormData = z.infer<typeof registerSchema>;
-export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
-export type ScooterSchemaData = z.infer<typeof scooterSchema>;
-export type SessionSchemaData = z.infer<typeof sessionSchema>;
-

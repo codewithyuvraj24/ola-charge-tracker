@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme, type AppTheme } from "@/lib/theme-provider";
+import { useTheme, type AppTheme } from "@/providers/theme-provider";
 import { Badge } from "@/components/ui/badge";
 import { Zap, Shield, Flame, Sun, Sparkles } from "lucide-react";
 

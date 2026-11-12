@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { useAuth } from "@/lib/auth-context";
-import { useScooter } from "@/lib/scooter-context";
+import { useAuth } from "@/providers/auth-provider";
+import { useScooter } from "@/providers/scooter-provider";
 import { getChargingSessions } from "@/lib/firestore";
 import {
   computeDashboardStats,

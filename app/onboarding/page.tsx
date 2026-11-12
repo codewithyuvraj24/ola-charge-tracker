@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/providers/auth-provider";
 import { completeOnboarding } from "@/lib/firestore";
 import { SCOOTER_MODELS, DEFAULT_SCOOTER, type ScooterFormData } from "@/lib/types";
 import { Button } from "@/components/ui/button";

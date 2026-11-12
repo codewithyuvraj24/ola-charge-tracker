@@ -9,6 +9,7 @@ import {
   computeEvVsPetrolSavings,
 } from "../lib/calculations.ts";
 import { toLocalDateInputValue, parseLocalDateInput, formatCurrency } from "../lib/utils.ts";
+import { buildChargingCsv, parseChargingCsv } from "../lib/csv.ts";
 import { scooterSchema, sessionSchema } from "../lib/validations.ts";
 import type { ChargingSession } from "../lib/types.ts";
 
@@ -171,5 +172,31 @@ describe("validation schemas", () => {
       chargingLoss: 10,
     });
     assert.equal(validScooter.success, true);
+  });
+});
+
+describe("CSV export & import round-trip", () => {
+  it("escapes # and quotes safely and parses DD/MM/YYYY + escaped quotes back", () => {
+    const s = makeSession("csv-1", new Date(2026, 10, 12), {
+      location: "Home #2",
+      notes: 'Used "fast" plug',
+    });
+    const csv = buildChargingCsv([s], "$");
+    assert.ok(csv.includes("Rate ($/kWh)"));
+    assert.ok(csv.includes('"Home #2"'));
+    assert.ok(csv.includes('"Used ""fast"" plug"'));
+
+    const parsed = parseChargingCsv(csv, 12);
+    assert.equal(parsed.hasHeaderError, false);
+    assert.equal(parsed.rows.length, 1);
+    assert.equal(parsed.rows[0].location, "Home #2");
+    assert.equal(parsed.rows[0].notes, 'Used "fast" plug');
+
+    const dmyParsed = parseChargingCsv(
+      "Date,Start %,End %,Rate\n12/11/2026,20,85,10\n",
+      12
+    );
+    assert.equal(dmyParsed.rows.length, 1);
+    assert.equal(toLocalDateInputValue(dmyParsed.rows[0].date), "2026-11-12");
   });
 });

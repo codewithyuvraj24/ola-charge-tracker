@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/lib/auth-context";
-import { useScooter } from "@/lib/scooter-context";
+import { useAuth } from "@/providers/auth-provider";
+import { useScooter } from "@/providers/scooter-provider";
 import {
   addScooter,
   deleteScooter,
@@ -32,7 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ThemePreviewSwitcher } from "@/components/ui/theme-switcher";
+import { ThemePreviewSwitcher } from "@/components/shared/theme-switcher";
 import {
   Settings as SettingsIcon,
   Bike,

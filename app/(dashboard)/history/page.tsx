@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState, useMemo } from "react";
-import { useAuth } from "@/lib/auth-context";
-import { useScooter } from "@/lib/scooter-context";
+import { useAuth } from "@/providers/auth-provider";
+import { useScooter } from "@/providers/scooter-provider";
 import {
   getChargingSessions,
   deleteChargingSession,
@@ -11,6 +11,7 @@ import {
   importChargingSessions,
 } from "@/lib/firestore";
 import { formatCurrency, formatNumber, formatDate, toLocalDateInputValue, parseLocalDateInput } from "@/lib/utils";
+import { downloadChargingCsv, exportChargingExcel, parseChargingCsv } from "@/lib/csv";
 import type { ChargingSession, SessionFormData } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BatteryChargeLoader } from "@/components/ui/uiverse";
+import { BatteryChargeLoader } from "@/components/shared/uiverse";
 import {
   Search,
   Download,
@@ -61,7 +62,6 @@ import {
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
 
 export default function HistoryPage() {
   const { user, userProfile } = useAuth();
@@ -192,57 +192,7 @@ export default function HistoryPage() {
       toast.error("No sessions to export");
       return;
     }
-
-    const csvEscape = (val: string) => `"${val.replace(/"/g, '""')}"`;
-
-    const headers = [
-      "Session ID",
-      "Date",
-      "Start %",
-      "End %",
-      "Added %",
-      "Battery Capacity (kWh)",
-      "Energy Stored (kWh)",
-      "Grid Units (kWh)",
-      `Rate (${currency}/kWh)`,
-      "Charging Loss %",
-      `Total Cost (${currency})`,
-      "Start Odometer",
-      "End Odometer",
-      "Distance (km)",
-      "Location",
-      "Notes",
-    ];
-
-    const rows = filteredSessions.map((s) => [
-      csvEscape(s.id),
-      csvEscape(toLocalDateInputValue(s.date.toDate())),
-      s.startPercentage,
-      s.endPercentage,
-      s.addedPercentage,
-      s.batteryCapacity,
-      s.energyStored,
-      s.gridUnits,
-      s.electricityRate,
-      s.chargingLoss,
-      s.totalCost,
-      s.startOdometer ?? "",
-      s.endOdometer ?? "",
-      s.distanceTravelled ?? "",
-      csvEscape(s.location || ""),
-      csvEscape(s.notes || ""),
-    ]);
-
-    const csvContent = [headers.map(csvEscape).join(","), ...rows.map((e) => e.join(","))].join("\r\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `ola-charging-history-${toLocalDateInputValue()}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadChargingCsv(filteredSessions, currency);
     toast.success("CSV export downloaded");
   };
 
@@ -252,31 +202,7 @@ export default function HistoryPage() {
       toast.error("No sessions to export");
       return;
     }
-
-    const rateCol = `Rate (${currency}/kWh)`;
-    const costCol = `Total Cost (${currency})`;
-    const data = filteredSessions.map((s) => ({
-      Date: formatDate(s.date.toDate()),
-      "Start %": s.startPercentage,
-      "End %": s.endPercentage,
-      "Added %": s.addedPercentage,
-      "Battery (kWh)": s.batteryCapacity,
-      "Energy Stored (kWh)": s.energyStored,
-      "Grid Units (kWh)": s.gridUnits,
-      [rateCol]: s.electricityRate,
-      "Loss %": s.chargingLoss,
-      [costCol]: s.totalCost,
-      "Start Odo (km)": s.startOdometer || "",
-      "End Odo (km)": s.endOdometer || "",
-      "Distance (km)": s.distanceTravelled || "",
-      Location: s.location || "",
-      Notes: s.notes || "",
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Charging History");
-    XLSX.writeFile(workbook, `ola-charging-history-${toLocalDateInputValue()}.xlsx`);
+    exportChargingExcel(filteredSessions, currency);
     toast.success("Excel export downloaded");
   };
 
@@ -383,89 +309,12 @@ export default function HistoryPage() {
     if (!file) return;
     setImportFileName(file.name);
     const text = await file.text();
-    const lines = text
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
+    const { rows, hasHeaderError } = parseChargingCsv(text, scooter?.electricityRate || 12);
 
-    if (lines.length < 2) {
+    if (hasHeaderError) {
       toast.error("CSV file needs a header row and at least one data row");
       setParsedImportRows([]);
       return;
-    }
-
-    const parseLine = (line: string): string[] => {
-      const cells: string[] = [];
-      let cur = "";
-      let inQuotes = false;
-      for (let i = 0; i < line.length; i++) {
-        const ch = line[i];
-        if (ch === '"') {
-          if (inQuotes && line[i + 1] === '"') {
-            cur += '"';
-            i++;
-          } else {
-            inQuotes = !inQuotes;
-          }
-        } else if (ch === "," && !inQuotes) {
-          cells.push(cur.trim());
-          cur = "";
-        } else {
-          cur += ch;
-        }
-      }
-      cells.push(cur.trim());
-      return cells;
-    };
-
-    const parseFlexibleDate = (raw: string): Date => {
-      const trimmed = (raw || "").trim();
-      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-        return parseLocalDateInput(trimmed);
-      }
-      const dmy = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/.exec(trimmed);
-      if (dmy) {
-        return new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]), 12, 0, 0, 0);
-      }
-      return new Date(trimmed);
-    };
-
-    const headers = parseLine(lines[0]).map((h) => h.toLowerCase());
-    const idxDate = headers.findIndex((h) => h.includes("date"));
-    const idxStart = headers.findIndex((h) => h.includes("start %") || h === "start" || h.includes("startpct"));
-    const idxEnd = headers.findIndex((h) => h.includes("end %") || h === "end" || h.includes("endpct"));
-    const idxRate = headers.findIndex((h) => h.includes("rate"));
-    const idxSOdo = headers.findIndex((h) => h.includes("start odo"));
-    const idxEOdo = headers.findIndex((h) => h.includes("end odo"));
-    const idxLoc = headers.findIndex((h) => h.includes("location"));
-    const idxNotes = headers.findIndex((h) => h.includes("note"));
-
-    const rows: SessionFormData[] = [];
-    for (let i = 1; i < lines.length; i++) {
-      const cols = parseLine(lines[i]);
-      const dRaw = idxDate >= 0 ? cols[idxDate] : cols[0];
-      const sPct = parseFloat(idxStart >= 0 ? cols[idxStart] : cols[1]);
-      const ePct = parseFloat(idxEnd >= 0 ? cols[idxEnd] : cols[2]);
-      const rVal = idxRate >= 0 ? parseFloat(cols[idxRate]) : scooter?.electricityRate || 12;
-
-      const parsedDate = parseFlexibleDate(dRaw);
-      if (isNaN(parsedDate.getTime()) || isNaN(sPct) || isNaN(ePct) || ePct <= sPct) {
-        continue;
-      }
-
-      const sOdo = idxSOdo >= 0 && cols[idxSOdo] ? parseFloat(cols[idxSOdo]) : undefined;
-      const eOdo = idxEOdo >= 0 && cols[idxEOdo] ? parseFloat(cols[idxEOdo]) : undefined;
-
-      rows.push({
-        date: parsedDate,
-        startPercentage: Math.max(0, Math.min(99, sPct)),
-        endPercentage: Math.max(1, Math.min(100, ePct)),
-        electricityRate: isNaN(rVal) ? scooter?.electricityRate || 12 : rVal,
-        startOdometer: sOdo && !isNaN(sOdo) ? sOdo : undefined,
-        endOdometer: eOdo && !isNaN(eOdo) ? eOdo : undefined,
-        location: idxLoc >= 0 ? cols[idxLoc] || undefined : undefined,
-        notes: idxNotes >= 0 ? cols[idxNotes] || undefined : undefined,
-      });
     }
 
     setParsedImportRows(rows);

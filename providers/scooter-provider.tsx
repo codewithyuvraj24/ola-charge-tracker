@@ -1,9 +1,9 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { useAuth } from "./auth-context";
-import { getScooters } from "./firestore";
-import type { Scooter } from "./types";
+import { useAuth } from "./auth-provider";
+import { getScooters } from "@/lib/firestore";
+import type { Scooter } from "@/lib/types";
 
 interface ScooterContextType {
   scooter: Scooter | null;

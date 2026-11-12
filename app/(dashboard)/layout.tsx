@@ -3,15 +3,15 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
-import { ScooterProvider, useScooter } from "@/lib/scooter-context";
-import { useTheme, APP_THEMES } from "@/lib/theme-provider";
+import { useAuth } from "@/providers/auth-provider";
+import { ScooterProvider, useScooter } from "@/providers/scooter-provider";
+import { useTheme, APP_THEMES } from "@/providers/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BatteryChargeLoader, LiveStatusPill } from "@/components/ui/uiverse";
+import { BatteryChargeLoader, LiveStatusPill } from "@/components/shared/uiverse";
 import {
   DropdownMenu,
   DropdownMenuContent,

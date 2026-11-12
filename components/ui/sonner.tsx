@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/lib/theme-provider";
+import { useTheme } from "@/providers/theme-provider";
 import { Toaster as SonnerToaster } from "sonner";
 
 export function Toaster() {

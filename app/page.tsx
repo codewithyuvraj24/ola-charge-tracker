@@ -2,17 +2,17 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { useAuth } from "@/lib/auth-context";
-import { useTheme, APP_THEMES } from "@/lib/theme-provider";
+import { useAuth } from "@/providers/auth-provider";
+import { useTheme, APP_THEMES } from "@/providers/theme-provider";
 import { calculateSession } from "@/lib/calculations";
 import { formatCurrency, formatNumber } from "@/lib/utils";
-import { VisualBatteryGauge } from "@/components/ui/battery-gauge";
+import { VisualBatteryGauge } from "@/components/ev/battery-gauge";
 import {
   ChargePulseButton,
   LiveStatusPill,
   SpotlightCard,
   TactileSwitch,
-} from "@/components/ui/uiverse";
+} from "@/components/shared/uiverse";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

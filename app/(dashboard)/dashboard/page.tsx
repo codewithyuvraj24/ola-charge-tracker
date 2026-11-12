@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { useAuth } from "@/lib/auth-context";
-import { useScooter } from "@/lib/scooter-context";
+import { useAuth } from "@/providers/auth-provider";
+import { useScooter } from "@/providers/scooter-provider";
 import { getChargingSessions, addChargingSession, deleteChargingSession } from "@/lib/firestore";
 import {
   computeDashboardStats,
@@ -13,8 +13,8 @@ import {
 import { formatCurrency, formatNumber, formatDate, getDateRange, toLocalDateInputValue, parseLocalDateInput } from "@/lib/utils";
 import type { ChargingSession, DateFilter, TariffPreset } from "@/lib/types";
 import { DATE_FILTER_OPTIONS, DEFAULT_TARIFF_PRESETS } from "@/lib/types";
-import { VisualBatteryGauge } from "@/components/ui/battery-gauge";
-import { ChargePulseButton } from "@/components/ui/uiverse";
+import { VisualBatteryGauge } from "@/components/ev/battery-gauge";
+import { ChargePulseButton } from "@/components/shared/uiverse";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
